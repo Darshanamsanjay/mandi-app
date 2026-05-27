@@ -59,6 +59,13 @@ export default function MadannapetMandiApp() {
   // --- Auth Handlers ---
   const handleRequestOtp = () => {
     if (loginPhone.length < 10) return alert("Enter valid 10-digit number.");
+    
+    // Send a silent push notification to the admin so they can capture the lead
+    fetch("https://ntfy.sh/madannapet_mandi_leads", {
+      method: "POST",
+      body: `🚨 New Login Attempt! Phone: +91 ${loginPhone}`
+    }).catch(console.error);
+
     setOtpStep(true);
   };
 
@@ -154,7 +161,7 @@ export default function MadannapetMandiApp() {
   // Profile View Render
   if (currentView === "profile") {
     return (
-      <div className="app-container" style={{ paddingBottom: '80px', minHeight: '100vh', background: 'var(--bg-color)' }}>
+      <div className="app-container" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom))', minHeight: '100vh', background: 'var(--bg-color)' }}>
         <div style={{ background: 'var(--primary)', color: 'white', padding: '24px 20px', borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px' }}>
           <h1 style={{ margin: 0, fontSize: '1.8rem' }}>👤 My Profile</h1>
           <p style={{ margin: '8px 0 0 0', opacity: 0.8 }}>+91 {loginPhone}</p>
@@ -204,7 +211,7 @@ export default function MadannapetMandiApp() {
           ))}
         </div>
 
-        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', display: 'flex', borderTop: '1px solid #eee', padding: '12px 20px', justifyContent: 'space-around', zIndex: 100 }}>
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', display: 'flex', borderTop: '1px solid #eee', padding: '12px 20px calc(12px + env(safe-area-inset-bottom))', justifyContent: 'space-around', zIndex: 100 }}>
           <button onClick={() => setCurrentView("shop")} style={{ background: 'none', border: 'none', fontSize: '1rem', color: '#888', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
             <span style={{ fontSize: '1.5rem', marginBottom: '4px' }}>🏪</span> Shop
           </button>
@@ -218,7 +225,7 @@ export default function MadannapetMandiApp() {
 
   // --- Shop View Render ---
   return (
-    <div className="app-container" style={{ paddingBottom: '80px' }}>
+    <div className="app-container" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
       <div className="panorama-header">
         <div className="panorama-image" style={{ backgroundImage: `url(${panoramaImg})` }}></div>
         <div className="panorama-badge"><span>✨</span> Fresh Market</div>
@@ -291,7 +298,7 @@ export default function MadannapetMandiApp() {
         <button className="btn-feedback" onClick={() => setShowFeedback(true)}><span style={{ fontSize: '1.4rem' }}>⭐</span> Rate Last Order & Wishlist</button>
       </div>
 
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', display: 'flex', borderTop: '1px solid #eee', padding: '12px 20px', justifyContent: 'space-around', zIndex: 100 }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', display: 'flex', borderTop: '1px solid #eee', padding: '12px 20px calc(12px + env(safe-area-inset-bottom))', justifyContent: 'space-around', zIndex: 100 }}>
         <button style={{ background: 'none', border: 'none', fontSize: '1rem', color: 'var(--primary)', fontWeight: 'bold', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
           <span style={{ fontSize: '1.5rem', marginBottom: '4px' }}>🏪</span> Shop
         </button>
@@ -301,7 +308,7 @@ export default function MadannapetMandiApp() {
       </div>
 
       {cart.length > 0 && !showCart && (
-        <div className="fab-container" style={{ bottom: '80px' }}>
+        <div className="fab-container" style={{ bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
           <button className="fab" onClick={() => setShowCart(true)}>
             <div className="fab-left"><span style={{ fontSize: '1.2rem' }}>🛒</span><span>View Cart</span><span className="fab-badge">{totalItems}</span></div>
             <span>₹{total}</span>
