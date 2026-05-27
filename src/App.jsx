@@ -117,36 +117,88 @@ export default function MadannapetMandiApp() {
   // --- Login View ---
   if (!isAuthenticated) {
     return (
-      <div className="w-full max-w-[480px] mx-auto min-h-screen flex flex-col justify-center items-center p-6 bg-transparent relative overflow-visible">
+      <div className="w-full max-w-[480px] mx-auto min-h-screen flex flex-col justify-end items-center p-6 bg-white relative overflow-hidden pb-12 shadow-[0_0_50px_rgba(0,0,0,0.1)]">
+        {/* Cinematic Video Background inside the phone container */}
         <video 
           autoPlay 
           loop 
           muted 
           playsInline 
-          className="fixed w-[100vw] h-[100vh] object-cover top-0 left-0 z-[-1]"
+          className="absolute inset-0 w-full h-full object-cover z-0 opacity-50"
         >
-          <source src="/login-video.mp4" type="video/mp4" />
+          <source src="/Login page video.mp4" type="video/mp4" />
         </video>
-        <div className="absolute top-[-10%] left-[-20%] w-[300px] h-[300px] bg-mandi-primary-light/40 blur-[40px] rounded-full animate-float-decor"></div>
-        <div className="absolute bottom-[-10%] right-[-20%] w-[350px] h-[350px] bg-mandi-accent/40 blur-[50px] rounded-full animate-float-decor-reverse"></div>
-        <div className="w-full bg-white/70 backdrop-blur-2xl border border-white/50 rounded-[32px] p-8 text-center text-slate-900 z-10 shadow-[0_20px_50px_rgba(0,0,0,0.15)] animate-fade-up-login">
-          <img src="/logo.png" alt="Madannapet Mandi Logo" className="w-56 mx-auto mb-4 animate-icon-float drop-shadow-sm object-contain mix-blend-multiply contrast-125 brightness-110" />
-          <p className="text-xs font-bold opacity-70 mb-8 text-slate-700 uppercase tracking-widest">Fresh Produce & Macros</p>
+        
+        <div className="absolute inset-0 bg-gradient-to-t from-white via-white/30 to-transparent z-[1] pointer-events-none"></div>
+
+        {/* Fully Transparent Login Overlay */}
+        <div className="w-full max-w-md p-2 text-center text-slate-900 z-10 relative animate-fade-up-login mt-auto mb-4">
+          
+          {/* Logo Showcase */}
+          <div className="relative mx-auto w-full max-w-[280px] flex items-center justify-center mb-10 animate-icon-float">
+             {/* Soft radial glow to ensure readability over busy video */}
+             <div className="absolute w-[180%] h-[180%] bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.95)_0%,_rgba(255,255,255,0)_70%)] pointer-events-none -z-10"></div>
+             <img src="/logo.png" alt="Madannapet Mandi Logo" className="relative w-full object-contain mix-blend-multiply contrast-125 brightness-110" />
+          </div>
+          
+          <p className="text-[11px] font-extrabold opacity-70 mb-10 text-slate-800 uppercase tracking-[0.3em]">
+            Farm Fresh Delivery
+          </p>
+          
           {!otpStep ? (
-            <div>
-              <input type="tel" placeholder="Enter Mobile Number" value={loginPhone} onChange={(e) => setLoginPhone(e.target.value)} className="w-full bg-white/60 border border-slate-300 text-slate-900 p-4 rounded-2xl text-lg text-center tracking-widest mb-5 transition-all focus:outline-none focus:border-mandi-primary focus:bg-white placeholder-slate-500 font-bold" maxLength={10} />
-              <button onClick={handleRequestOtp} className="w-full bg-mandi-primary text-white p-4 rounded-2xl text-lg font-bold shadow-lg active:scale-95 transition-all">Get OTP</button>
+            <div className="relative">
+              {/* Animated Glowing Input Wrapper */}
+              <div className="relative group/input mb-6">
+                 {/* Outer Glow that appears on focus */}
+                 <div className="absolute -inset-1 bg-gradient-to-r from-mandi-primary to-mandi-accent rounded-2xl blur opacity-0 group-focus-within/input:opacity-30 transition duration-700"></div>
+                 <input 
+                   type="tel" 
+                   placeholder="Enter Mobile Number" 
+                   value={loginPhone} 
+                   onChange={(e) => setLoginPhone(e.target.value)} 
+                   className="relative w-full bg-transparent border-b-2 border-slate-300 text-slate-900 p-5 text-lg text-center tracking-[0.15em] transition-all duration-300 focus:outline-none focus:border-mandi-primary placeholder-slate-500 font-bold" 
+                   maxLength={10} 
+                 />
+                 <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-30 group-focus-within/input:opacity-80 transition-opacity"><span className="text-xl">📱</span></div>
+              </div>
+              
+              {/* Premium Interactive Button */}
+              <button onClick={handleRequestOtp} className="relative w-full overflow-hidden rounded-2xl group/btn active:scale-[0.97] transition-all duration-300 shadow-[0_8px_30px_rgba(79,70,229,0.4)] hover:shadow-[0_15px_40px_rgba(79,70,229,0.6)]">
+                <div className="absolute inset-0 bg-gradient-to-r from-mandi-primary via-indigo-500 to-indigo-800 transition-all duration-500 group-hover/btn:scale-110 group-hover/btn:rotate-1"></div>
+                <div className="relative flex items-center justify-center gap-2 p-5 text-white text-lg font-bold tracking-wide">
+                  Get OTP
+                  <svg className="w-5 h-5 group-hover/btn:translate-x-1.5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                </div>
+              </button>
             </div>
           ) : (
             <div className="animate-slide-left">
-              <p className="text-sm mb-4 font-bold text-slate-700">
+              <p className="text-sm mb-6 font-bold text-slate-800 tracking-wide">
                 OTP sent to +91 {loginPhone} <br/>
-                <span className="inline-block bg-mandi-accent text-black px-3 py-1.5 rounded-lg font-bold mt-2 shadow-md">
+                <span className="inline-block bg-gradient-to-r from-amber-100 to-amber-200 border border-amber-300 text-amber-900 px-4 py-2.5 rounded-xl font-bold mt-4 shadow-sm backdrop-blur-md">
                   Ado oka number type chey 4 digits di 😂
                 </span>
               </p>
-              <input type="number" placeholder="Enter 4-digit OTP" value={otp} onChange={(e) => setOtp(e.target.value)} className="w-full bg-white/60 border border-slate-300 text-slate-900 p-4 rounded-2xl text-lg text-center tracking-widest mb-5 transition-all focus:outline-none focus:border-mandi-primary focus:bg-white placeholder-slate-500 font-bold" maxLength={4} />
-              <button onClick={handleVerifyOtp} className="w-full bg-mandi-primary text-white p-4 rounded-2xl text-lg font-bold shadow-lg active:scale-95 transition-all">Verify & Login</button>
+              
+              <div className="relative group/input mb-6">
+                 <div className="absolute -inset-1 bg-gradient-to-r from-mandi-primary to-mandi-accent rounded-2xl blur opacity-0 group-focus-within/input:opacity-30 transition duration-700"></div>
+                 <input 
+                   type="number" 
+                   placeholder="____" 
+                   value={otp} 
+                   onChange={(e) => setOtp(e.target.value)} 
+                   className="relative w-full bg-transparent border-b-2 border-slate-300 text-slate-900 p-5 text-2xl text-center tracking-[0.6em] transition-all duration-300 focus:outline-none focus:border-mandi-primary placeholder-slate-500 font-bold" 
+                   maxLength={4} 
+                 />
+              </div>
+
+              <button onClick={handleVerifyOtp} className="relative w-full overflow-hidden rounded-2xl group/btn active:scale-[0.97] transition-all duration-300 shadow-[0_8px_30px_rgba(16,185,129,0.4)] hover:shadow-[0_15px_40px_rgba(16,185,129,0.6)]">
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-700 transition-all duration-500 group-hover/btn:scale-110 group-hover/btn:-rotate-1"></div>
+                <div className="relative flex items-center justify-center gap-2 p-5 text-white text-lg font-bold tracking-wide">
+                  Verify & Login
+                  <span className="text-xl drop-shadow-md">✨</span>
+                </div>
+              </button>
             </div>
           )}
         </div>
