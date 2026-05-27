@@ -106,7 +106,12 @@ export default function MadannapetMandiApp() {
             </div>
           ) : (
             <div className="otp-animation">
-              <p style={{ fontSize: '0.9rem', marginBottom: '16px', opacity: 0.8 }}>OTP sent to +91 {loginPhone} <br/> (Simulation: enter any 4 digits)</p>
+              <p style={{ fontSize: '0.9rem', marginBottom: '16px', opacity: 0.9 }}>
+                OTP sent to +91 {loginPhone} <br/>
+                <span style={{ display: 'inline-block', background: '#f59e0b', color: 'black', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', marginTop: '8px', boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4)' }}>
+                  Ado oka number type chey 4 digits di 😂
+                </span>
+              </p>
               <input type="number" placeholder="Enter 4-digit OTP" value={otp} onChange={(e) => setOtp(e.target.value)} className="login-input" maxLength={4} />
               <button onClick={handleVerifyOtp} className="btn-login">Verify & Login</button>
             </div>
