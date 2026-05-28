@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./index.css";
 
 export default function MadannapetMandiApp() {
@@ -30,6 +30,19 @@ export default function MadannapetMandiApp() {
   const [loginPhone, setLoginPhone] = useState("");
   const [otpStep, setOtpStep] = useState(false);
   const [otp, setOtp] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [generatedOtp, setGeneratedOtp] = useState(null);
+
+  // Initialize from localStorage
+  useEffect(() => {
+    const savedUser = localStorage.getItem("mandi_user_phone");
+    if (savedUser) {
+      setLoginPhone(savedUser);
+      setPhone(savedUser);
+      setIsAuthenticated(true);
+    }
+  }, []);
 
   // App State
   const [currentView, setCurrentView] = useState("shop");
@@ -58,18 +71,50 @@ export default function MadannapetMandiApp() {
 
   // --- Auth Handlers ---
   const handleRequestOtp = () => {
-    if (loginPhone.length < 10) return alert("Enter valid 10-digit number.");
-    fetch("https://ntfy.sh/madannapet_mandi_leads", {
-      method: "POST",
-      body: `🚨 New Login Attempt! Phone: +91 ${loginPhone}`
-    }).catch(console.error);
-    setOtpStep(true);
+    setAuthError("");
+    if (loginPhone.length < 10) return setAuthError("Enter valid 10-digit number.");
+    setIsLoading(true);
+    
+    // Simulate network delay
+    setTimeout(() => {
+      const mockOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedOtp(mockOtp);
+      setOtpStep(true);
+      setIsLoading(false);
+      
+      fetch("https://ntfy.sh/madannapet_mandi_leads", {
+        method: "POST",
+        body: `🚨 New Mock Login Attempt! Phone: +91 ${loginPhone}`
+      }).catch(console.error);
+    }, 1500);
   };
 
   const handleVerifyOtp = () => {
-    if (otp.length < 4) return alert("Enter 4-digit OTP.");
-    setPhone(loginPhone);
-    setIsAuthenticated(true);
+    setAuthError("");
+    if (otp.length !== 6) return setAuthError("Enter the 6-digit OTP.");
+    setIsLoading(true);
+    
+    setTimeout(() => {
+      if (otp === generatedOtp) {
+        setPhone(loginPhone);
+        setIsAuthenticated(true);
+        localStorage.setItem("mandi_user_phone", loginPhone);
+      } else {
+        setAuthError("Invalid OTP. Please try again.");
+      }
+      setIsLoading(false);
+    }, 1000);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("mandi_user_phone");
+    setIsAuthenticated(false);
+    setLoginPhone("");
+    setPhone("");
+    setOtpStep(false);
+    setOtp("");
+    setGeneratedOtp(null);
+    setCurrentView("shop");
   };
 
   // --- Main App Logic ---
@@ -145,6 +190,19 @@ export default function MadannapetMandiApp() {
             Farm Fresh Delivery
           </p>
           
+          {authError && (
+            <div className="mb-4 text-sm font-bold text-red-600 bg-red-100/90 border border-red-300 rounded-lg p-3 shadow-sm backdrop-blur-md animate-fade-in">
+              ⚠️ {authError}
+            </div>
+          )}
+          
+          {generatedOtp && otpStep && (
+            <div className="mb-6 text-sm font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-300 rounded-lg p-4 shadow-sm backdrop-blur-md animate-fade-in border-dashed">
+              <span className="block text-xs text-emerald-600 mb-1">MOCK OTP RECEIVED</span>
+              <span className="text-2xl tracking-[0.3em] font-extrabold">{generatedOtp}</span>
+            </div>
+          )}
+          
           {!otpStep ? (
             <div className="relative">
               {/* Animated Glowing Input Wrapper */}
@@ -163,11 +221,17 @@ export default function MadannapetMandiApp() {
               </div>
               
               {/* Premium Interactive Button */}
-              <button onClick={handleRequestOtp} className="relative w-full overflow-hidden rounded-2xl group/btn active:scale-[0.97] transition-all duration-300 shadow-[0_8px_30px_rgba(79,70,229,0.4)] hover:shadow-[0_15px_40px_rgba(79,70,229,0.6)]">
+              <button onClick={handleRequestOtp} disabled={isLoading} className="relative w-full overflow-hidden rounded-2xl group/btn active:scale-[0.97] transition-all duration-300 shadow-[0_8px_30px_rgba(79,70,229,0.4)] hover:shadow-[0_15px_40px_rgba(79,70,229,0.6)] disabled:opacity-70 disabled:active:scale-100">
                 <div className="absolute inset-0 bg-gradient-to-r from-mandi-primary via-indigo-500 to-indigo-800 transition-all duration-500 group-hover/btn:scale-110 group-hover/btn:rotate-1"></div>
                 <div className="relative flex items-center justify-center gap-2 p-5 text-white text-lg font-bold tracking-wide">
-                  Get OTP
-                  <svg className="w-5 h-5 group-hover/btn:translate-x-1.5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                  {isLoading ? (
+                    <span className="animate-spin text-xl">⏳</span>
+                  ) : (
+                    <>
+                      Get OTP
+                      <svg className="w-5 h-5 group-hover/btn:translate-x-1.5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                    </>
+                  )}
                 </div>
               </button>
             </div>
@@ -184,19 +248,25 @@ export default function MadannapetMandiApp() {
                  <div className="absolute -inset-1 bg-gradient-to-r from-mandi-primary to-mandi-accent rounded-2xl blur opacity-0 group-focus-within/input:opacity-30 transition duration-700"></div>
                  <input 
                    type="number" 
-                   placeholder="____" 
+                   placeholder="______" 
                    value={otp} 
                    onChange={(e) => setOtp(e.target.value)} 
                    className="relative w-full bg-transparent border-b-2 border-slate-300 text-slate-900 p-5 text-2xl text-center tracking-[0.6em] transition-all duration-300 focus:outline-none focus:border-mandi-primary placeholder-slate-500 font-bold" 
-                   maxLength={4} 
+                   maxLength={6} 
                  />
               </div>
 
-              <button onClick={handleVerifyOtp} className="relative w-full overflow-hidden rounded-2xl group/btn active:scale-[0.97] transition-all duration-300 shadow-[0_8px_30px_rgba(16,185,129,0.4)] hover:shadow-[0_15px_40px_rgba(16,185,129,0.6)]">
+              <button onClick={handleVerifyOtp} disabled={isLoading} className="relative w-full overflow-hidden rounded-2xl group/btn active:scale-[0.97] transition-all duration-300 shadow-[0_8px_30px_rgba(16,185,129,0.4)] hover:shadow-[0_15px_40px_rgba(16,185,129,0.6)] disabled:opacity-70 disabled:active:scale-100">
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-700 transition-all duration-500 group-hover/btn:scale-110 group-hover/btn:-rotate-1"></div>
                 <div className="relative flex items-center justify-center gap-2 p-5 text-white text-lg font-bold tracking-wide">
-                  Verify & Login
-                  <span className="text-xl drop-shadow-md">✨</span>
+                  {isLoading ? (
+                    <span className="animate-spin text-xl">⏳</span>
+                  ) : (
+                    <>
+                      Verify & Login
+                      <span className="text-xl drop-shadow-md">✨</span>
+                    </>
+                  )}
                 </div>
               </button>
             </div>
@@ -257,6 +327,10 @@ export default function MadannapetMandiApp() {
               </div>
             </div>
           ))}
+
+          <button onClick={handleLogout} className="mt-6 w-full bg-red-50 text-red-600 font-bold py-3.5 rounded-2xl border border-red-200 shadow-sm active:scale-95 transition-transform">
+            Log Out
+          </button>
         </div>
 
         {/* Bottom Nav */}
