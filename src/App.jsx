@@ -238,10 +238,7 @@ export default function MadannapetMandiApp() {
           ) : (
             <div className="animate-slide-left">
               <p className="text-sm mb-6 font-bold text-slate-800 tracking-wide">
-                OTP sent to +91 {loginPhone} <br/>
-                <span className="inline-block bg-gradient-to-r from-amber-100 to-amber-200 border border-amber-300 text-amber-900 px-4 py-2.5 rounded-xl font-bold mt-4 shadow-sm backdrop-blur-md">
-                  Ado oka number type chey 4 digits di 😂
-                </span>
+                OTP sent to +91 {loginPhone}
               </p>
               
               <div className="relative group/input mb-6">
