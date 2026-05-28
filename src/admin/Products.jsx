@@ -136,7 +136,7 @@ export default function Products() {
 
 function ProductModal({ product, onClose, onSave }) {
   const [formData, setFormData] = useState(
-    product || { name: '', price: '', unit: '', category: 'Vegetables', image: '', stock: '' }
+    product || { name: '', price: '', unit: '1 Kg', category: 'Vegetables', image: '', stock: '' }
   );
   const [isSaving, setIsSaving] = useState(false);
 
@@ -156,6 +156,12 @@ function ProductModal({ product, onClose, onSave }) {
   };
 
   const categories = ["Popular Packs", "Vegetables", "Fruits", "Protein", "Gym Meals"];
+  
+  const defaultUnits = ["1 Kg", "500 Grams", "250 Grams", "1 Ltr", "500 ml", "1 Pcs", "1 Pack", "1 Dozen", "1 Box"];
+  const currentUnit = formData.unit;
+  const unitOptions = (currentUnit && !defaultUnits.includes(currentUnit)) 
+    ? [currentUnit, ...defaultUnits] 
+    : defaultUnits;
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
@@ -177,8 +183,10 @@ function ProductModal({ product, onClose, onSave }) {
               <input type="number" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-mandi-primary focus:outline-none font-medium" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">Unit (e.g. 1 Kg)</label>
-              <input type="text" value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-mandi-primary focus:outline-none font-medium" />
+              <label className="block text-xs font-bold text-slate-500 mb-1">Unit</label>
+              <select value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-mandi-primary focus:outline-none font-medium">
+                {unitOptions.map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 mb-1">Stock Qty (Optional)</label>
