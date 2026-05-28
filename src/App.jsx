@@ -37,10 +37,31 @@ export default function MadannapetMandiApp() {
   // Initialize from localStorage
   useEffect(() => {
     const savedUser = localStorage.getItem("mandi_user_phone");
-    if (savedUser) {
-      setLoginPhone(savedUser);
-      setPhone(savedUser);
-      setIsAuthenticated(true);
+    const loginTime = localStorage.getItem("mandi_user_login_time");
+    
+    const performLogout = () => {
+      localStorage.removeItem("mandi_user_phone");
+      localStorage.removeItem("mandi_user_login_time");
+      setIsAuthenticated(false);
+      setLoginPhone("");
+      setPhone("");
+      setOtpStep(false);
+      setOtp("");
+      setGeneratedOtp(null);
+      setCurrentView("shop");
+    };
+
+    if (savedUser && loginTime) {
+      const timeElapsed = Date.now() - parseInt(loginTime, 10);
+      const sessionDuration = 15 * 60 * 1000; // 15 minutes
+      
+      if (timeElapsed < sessionDuration) {
+        setLoginPhone(savedUser);
+        setPhone(savedUser);
+        setIsAuthenticated(true);
+      } else {
+        performLogout();
+      }
     }
   }, []);
 
@@ -99,6 +120,7 @@ export default function MadannapetMandiApp() {
         setPhone(loginPhone);
         setIsAuthenticated(true);
         localStorage.setItem("mandi_user_phone", loginPhone);
+        localStorage.setItem("mandi_user_login_time", Date.now().toString());
       } else {
         setAuthError("Invalid OTP. Please try again.");
       }
@@ -108,6 +130,7 @@ export default function MadannapetMandiApp() {
 
   const handleLogout = () => {
     localStorage.removeItem("mandi_user_phone");
+    localStorage.removeItem("mandi_user_login_time");
     setIsAuthenticated(false);
     setLoginPhone("");
     setPhone("");
@@ -199,7 +222,10 @@ export default function MadannapetMandiApp() {
           {generatedOtp && otpStep && (
             <div className="mb-6 text-sm font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-300 rounded-lg p-4 shadow-sm backdrop-blur-md animate-fade-in border-dashed">
               <span className="block text-xs text-emerald-600 mb-1">MOCK OTP RECEIVED</span>
-              <span className="text-2xl tracking-[0.3em] font-extrabold">{generatedOtp}</span>
+              <span className="text-2xl tracking-[0.3em] font-extrabold block">{generatedOtp}</span>
+              <span className="inline-block mt-3 bg-white/60 text-emerald-700 text-[10px] uppercase tracking-widest px-3 py-1 rounded-full border border-emerald-200">
+                👆 Enter the above OTP below
+              </span>
             </div>
           )}
           
