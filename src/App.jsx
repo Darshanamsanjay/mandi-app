@@ -395,8 +395,12 @@ if (currentView === "profile") {
           <div key={order.id} className="bg-white p-4 rounded-xl shadow-sm mb-3 flex justify-between items-center border border-slate-100">
             <div>
               <p className="m-0 font-bold text-slate-800 text-sm">{order.id}</p>
-              <p className="my-1 text-slate-500 text-xs font-medium">{order.date}</p>
-              <p className="m-0 text-xs font-medium text-slate-700">{order.items}</p>
+              <p className="my-1 text-slate-500 text-xs font-medium">{order.date || order.time}</p>
+              <p className="m-0 text-xs font-medium text-slate-700">
+                {Array.isArray(order.items) 
+                  ? order.items.map(i => `${i.quantity}x ${i.name}`).join(', ') 
+                  : order.items}
+              </p>
             </div>
             <div className="text-right">
               <p className="m-0 font-bold text-mandi-primary text-sm">₹{order.total}</p>
