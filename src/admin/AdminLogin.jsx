@@ -14,36 +14,47 @@ export default function AdminLogin({ onLogin }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 border border-slate-100 text-center relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-mandi-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-sans">
+      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-10 border border-gray-100 text-center">
         
-        <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-slate-900/20">
-          <span className="text-3xl">🔐</span>
-        </div>
+        <img 
+          src="/logo.png" 
+          alt="Mandi App Logo" 
+          className="w-56 mx-auto mb-10 object-contain mix-blend-multiply contrast-125 brightness-110" 
+        />
         
-        <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Admin Portal</h2>
-        <p className="text-slate-500 text-sm font-medium mb-8">Enter your secure PIN to access the dashboard.</p>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Admin Portal</h2>
+        <p className="text-gray-500 text-sm mb-8">Please enter your secure PIN to continue.</p>
         
-        {error && <div className="mb-6 p-3 bg-red-50 text-red-600 rounded-xl text-sm font-bold border border-red-100 animate-shake">{error}</div>}
+        {error && (
+          <div className="mb-6 p-3 bg-red-50 text-red-600 rounded-lg text-sm font-medium border border-red-100 animate-shake">
+            {error}
+          </div>
+        )}
         
-        <form onSubmit={handleLogin}>
-          <input 
-            type="password" 
-            placeholder="Enter PIN (1234)"
-            value={pin}
-            onChange={e => setPin(e.target.value)}
-            className="w-full bg-slate-50 border-2 border-slate-200 p-4 rounded-2xl text-center text-xl tracking-widest font-bold focus:border-mandi-primary focus:outline-none transition-colors mb-6"
-            maxLength={4}
-          />
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div>
+            <input 
+              type="password" 
+              placeholder="Enter PIN"
+              value={pin}
+              onChange={e => setPin(e.target.value)}
+              className="w-full bg-white border border-gray-300 p-4 rounded-lg text-center text-xl tracking-[0.5em] font-medium text-gray-800 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 focus:outline-none transition-all placeholder:tracking-normal placeholder:font-normal placeholder:text-gray-400"
+              maxLength={4}
+            />
+          </div>
           
           <button 
             type="submit"
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-colors shadow-lg shadow-slate-900/20 active:scale-[0.98]"
+            className="w-full bg-gray-900 hover:bg-black text-white font-medium py-4 rounded-lg transition-colors shadow-md"
           >
             Access Dashboard
           </button>
         </form>
+
+        <div className="mt-8 text-xs text-gray-400">
+          &copy; {new Date().getFullYear()} Mandi App. All rights reserved.
+        </div>
       </div>
     </div>
   );

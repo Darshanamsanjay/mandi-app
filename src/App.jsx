@@ -1,7 +1,52 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { db } from "./firebase";
 import { collection, onSnapshot, doc, query, where, writeBatch, increment } from "firebase/firestore";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import "./index.css";
+import { countryCodes } from "./countryCodes";
+
+// Fix for Leaflet default marker icon in Vite/React
+import iconUrl from "leaflet/dist/images/marker-icon.png";
+import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
+import shadowUrl from "leaflet/dist/images/marker-shadow.png";
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl,
+  iconUrl,
+  shadowUrl,
+});
+
+function MapEventsHandler({ setPosition }) {
+  useMapEvents({
+    click(e) {
+      setPosition([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+  return null;
+}
+
+function LocateControl({ setPosition }) {
+  const map = useMap();
+  return (
+    <div className="absolute bottom-4 right-4 z-[1000]">
+      <button 
+        onClick={(e) => {
+          e.preventDefault();
+          map.locate().on("locationfound", function (e) {
+            setPosition([e.latlng.lat, e.latlng.lng]);
+            map.flyTo(e.latlng, map.getZoom());
+          });
+        }}
+        className="bg-white text-slate-800 p-3 rounded-full shadow-lg border border-slate-200 active:scale-95 flex items-center justify-center font-bold text-xl"
+      >
+        📍
+      </button>
+    </div>
+  );
+}
 
 export default function App() {
   const [products, setProducts] = useState([]);
@@ -30,6 +75,7 @@ const categories = ["All", "Popular Packs", "Vegetables", "Fruits", "Protein", "
 // Authentication State
 const [isAuthenticated, setIsAuthenticated] = useState(false);
 const [loginPhone, setLoginPhone] = useState("");
+const [selectedCountryCode, setSelectedCountryCode] = useState("+91");
 const [otpStep, setOtpStep] = useState(false);
 const [otp, setOtp] = useState("");
 const [isLoading, setIsLoading] = useState(false);
@@ -77,6 +123,9 @@ const [showCart, setShowCart] = useState(false);
 const [customerName, setCustomerName] = useState("");
 const [phone, setPhone] = useState("");
 const [address, setAddress] = useState("");
+const [mapCoords, setMapCoords] = useState(null);
+const [showMapModal, setShowMapModal] = useState(false);
+const [tempPosition, setTempPosition] = useState([17.3616, 78.4747]); // Default Hyderabad
 
 // Orders State
 const [activeOrder, setActiveOrder] = useState(null);
@@ -121,7 +170,7 @@ const handleRequestOtp = () => {
 
     fetch("https://ntfy.sh/madannapet_mandi_leads", {
       method: "POST",
-      body: `🚨 New Mock Login Attempt! Phone: +91 ${loginPhone}`
+      body: `🚨 New Mock Login Attempt! Phone: ${selectedCountryCode} ${loginPhone}`
     }).catch(console.error);
   }, 1500);
 };
@@ -195,6 +244,7 @@ const placeOrder = async () => {
     customerName,
     phone,
     address,
+    mapCoords,
     items: cart,
     total: total,
     status: "📦 Preparing",
@@ -228,7 +278,8 @@ const placeOrder = async () => {
 
   const orderDetails = cart.map(item => `${item.name} x ${item.quantity} = ₹${item.price * item.quantity}`).join("%0A");
   const giftDetail = isFreeGiftUnlocked ? "%0A*Gift:* 1 x Premium Beverage (FREE)" : "";
-  const whatsappMessage = `Hello Madannapet Mandi! I want to place an order.%0A%0AName: ${customerName}%0APhone: ${phone}%0AAddress: ${address}%0A%0A*Order Items:*%0A${orderDetails}${giftDetail}%0A%0A*Receipt:*%0ASubtotal: ₹${subtotal}%0ADelivery Fee: ₹${deliveryFee}%0A${discount > 0 ? `Discount: -₹${discount}%0A` : ''}*Total to Pay: ₹${total}*%0A%0APlease deliver within 15-20 mins!`;
+  const mapLink = mapCoords ? `%0A*Location:* https://maps.google.com/?q=${mapCoords[0]},${mapCoords[1]}` : "";
+  const whatsappMessage = `Hello Madannapet Mandi! I want to place an order.%0A%0AName: ${customerName}%0APhone: ${phone}%0AAddress: ${address}${mapLink}%0A%0A*Order Items:*%0A${orderDetails}${giftDetail}%0A%0A*Receipt:*%0ASubtotal: ₹${subtotal}%0ADelivery Fee: ₹${deliveryFee}%0A${discount > 0 ? `Discount: -₹${discount}%0A` : ''}*Total to Pay: ₹${total}*%0A%0APlease deliver within 15-20 mins!`;
 
   window.open(`https://wa.me/918464046459?text=${whatsappMessage}`, "_blank");
   setCart([]);
@@ -239,115 +290,136 @@ const placeOrder = async () => {
 // --- Login View ---
 if (!isAuthenticated) {
   return (
-    <div className="w-full max-w-[480px] mx-auto min-h-screen flex flex-col justify-end items-center p-6 bg-white relative overflow-hidden pb-12 shadow-[0_0_50px_rgba(0,0,0,0.1)]">
-      {/* Cinematic Video Background inside the phone container */}
+    <div className="w-full min-h-screen flex items-center justify-center p-6 font-sans relative overflow-hidden">
+      
+      {/* Professional Full Background Video */}
       <video
         autoPlay
         loop
         muted
         playsInline
-        className="absolute inset-0 w-full h-full object-cover z-0 opacity-50"
+        className="absolute inset-0 w-full h-full object-cover z-0"
       >
         <source src="/Login page video.mp4" type="video/mp4" />
       </video>
 
-      <div className="absolute inset-0 bg-gradient-to-t from-white via-white/30 to-transparent z-[1] pointer-events-none"></div>
+      {/* Clean Dark Overlay for Cinematic Feel */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-0"></div>
+      
+      <div className="w-full max-w-md bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-10 border border-white/20 text-center animate-fade-up relative z-10">
 
-      {/* Fully Transparent Login Overlay */}
-      <div className="w-full max-w-md p-2 text-center text-slate-900 z-10 relative animate-fade-up-login mt-auto mb-4">
-
-        {/* Logo Showcase */}
-        <div className="relative mx-auto w-full max-w-[280px] flex items-center justify-center mb-10 animate-icon-float">
-          {/* Soft radial glow to ensure readability over busy video */}
-          <div className="absolute w-[180%] h-[180%] bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.95)_0%,_rgba(255,255,255,0)_70%)] pointer-events-none -z-10"></div>
-          <img src="/logo.png" alt="Madannapet Mandi Logo" className="relative w-full object-contain mix-blend-multiply contrast-125 brightness-110" />
-        </div>
-
-        <p className="text-[11px] font-extrabold opacity-70 mb-10 text-slate-800 uppercase tracking-[0.3em]">
-          Farm Fresh Delivery
-        </p>
+        <img 
+          src="/logo.png" 
+          alt="Madannapet Mandi Logo" 
+          className="w-56 mx-auto mb-8 object-contain mix-blend-multiply contrast-125 brightness-110" 
+        />
+        
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome Back</h2>
+        <p className="text-gray-500 text-sm mb-8">Enter your mobile number to continue.</p>
 
         {authError && (
-          <div className="mb-4 text-sm font-bold text-red-600 bg-red-100/90 border border-red-300 rounded-lg p-3 shadow-sm backdrop-blur-md animate-fade-in">
-            ⚠️ {authError}
+          <div className="mb-6 p-3 bg-red-50 text-red-600 rounded-lg text-sm font-medium border border-red-100 animate-shake">
+            {authError}
           </div>
         )}
 
         {generatedOtp && otpStep && (
-          <div className="mb-6 text-sm font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-300 rounded-lg p-4 shadow-sm backdrop-blur-md animate-fade-in border-dashed">
-            <span className="block text-xs text-emerald-600 mb-1">MOCK OTP RECEIVED</span>
+          <div className="mb-6 p-4 bg-emerald-50 text-emerald-800 rounded-lg border border-emerald-200 animate-fade-in text-center">
+            <span className="block text-xs text-emerald-600 mb-1 font-bold">MOCK OTP RECEIVED</span>
             <span className="text-2xl tracking-[0.3em] font-extrabold block">{generatedOtp}</span>
-            <span className="inline-block mt-3 bg-white/60 text-emerald-700 text-[10px] uppercase tracking-widest px-3 py-1 rounded-full border border-emerald-200">
-              👆 Enter the above OTP below
+            <span className="inline-block mt-2 text-emerald-600 text-[11px] font-medium">
+              Enter the OTP below to verify
             </span>
           </div>
         )}
 
         {!otpStep ? (
-          <div className="relative">
-            {/* Animated Glowing Input Wrapper */}
-            <div className="relative group/input mb-6">
-              {/* Outer Glow that appears on focus */}
-              <div className="absolute -inset-1 bg-gradient-to-r from-mandi-primary to-mandi-accent rounded-2xl blur opacity-0 group-focus-within/input:opacity-30 transition duration-700"></div>
+          <div className="space-y-6 animate-fade-in">
+            <div className="flex items-stretch bg-white border border-gray-300 rounded-lg overflow-hidden focus-within:border-gray-900 focus-within:ring-1 focus-within:ring-gray-900 transition-all">
+              <div className="flex items-center justify-center bg-gray-50 border-r border-gray-200 text-gray-700 font-bold text-lg relative group/select cursor-pointer hover:bg-gray-100 transition-colors min-w-[110px]">
+                <select
+                  value={selectedCountryCode}
+                  onChange={(e) => setSelectedCountryCode(e.target.value)}
+                  className="appearance-none bg-transparent outline-none cursor-pointer pl-4 pr-8 py-4 font-bold text-lg text-gray-700 w-full h-full z-10 focus:outline-none"
+                >
+                  {countryCodes.map(c => (
+                    <option key={c.name + c.code} value={c.code}>{c.flag} {c.code}</option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 group-hover/select:text-gray-600 transition-colors z-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                </div>
+              </div>
               <input
                 type="tel"
-                placeholder="Enter Mobile Number"
+                placeholder="Mobile Number"
                 value={loginPhone}
                 onChange={(e) => setLoginPhone(e.target.value)}
-                className="relative w-full bg-transparent border-b-2 border-slate-300 text-slate-900 p-5 text-lg text-center tracking-[0.15em] transition-all duration-300 focus:outline-none focus:border-mandi-primary placeholder-slate-500 font-bold"
+                className="w-full p-4 pl-4 text-left text-xl tracking-[0.15em] font-medium text-gray-800 focus:outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-gray-400 bg-transparent"
                 maxLength={10}
               />
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-30 group-focus-within/input:opacity-80 transition-opacity"><span className="text-xl">📱</span></div>
             </div>
 
-            {/* Premium Interactive Button */}
-            <button onClick={handleRequestOtp} disabled={isLoading} className="relative w-full overflow-hidden rounded-2xl group/btn active:scale-[0.97] transition-all duration-300 shadow-[0_8px_30px_rgba(79,70,229,0.4)] hover:shadow-[0_15px_40px_rgba(79,70,229,0.6)] disabled:opacity-70 disabled:active:scale-100">
-              <div className="absolute inset-0 bg-gradient-to-r from-mandi-primary via-indigo-500 to-indigo-800 transition-all duration-500 group-hover/btn:scale-110 group-hover/btn:rotate-1"></div>
-              <div className="relative flex items-center justify-center gap-2 p-5 text-white text-lg font-bold tracking-wide">
-                {isLoading ? (
-                  <span className="animate-spin text-xl">⏳</span>
-                ) : (
-                  <>
-                    Get OTP
-                    <svg className="w-5 h-5 group-hover/btn:translate-x-1.5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                  </>
-                )}
-              </div>
+            <button 
+              onClick={handleRequestOtp} 
+              disabled={isLoading} 
+              className="group relative w-full flex items-center justify-center gap-3 py-4 rounded-lg font-bold tracking-widest uppercase text-xs overflow-hidden border border-gray-900 text-gray-900 transition-colors duration-300 hover:text-white disabled:opacity-50 disabled:hover:text-gray-900 active:scale-[0.98]"
+            >
+              <div className="absolute inset-0 bg-gray-900 -translate-x-full group-hover:translate-x-0 group-disabled:hidden transition-transform duration-500 ease-out z-0"></div>
+              
+              {isLoading ? (
+                <span className="animate-spin text-xl z-10">⏳</span>
+              ) : (
+                <>
+                  <span className="z-10 relative">Get OTP</span>
+                  <svg className="w-4 h-4 z-10 relative transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </>
+              )}
             </button>
           </div>
         ) : (
-          <div className="animate-slide-left">
-            <p className="text-sm mb-6 font-bold text-slate-800 tracking-wide">
-              OTP sent to +91 {loginPhone}
+          <div className="space-y-6 animate-slide-left">
+            <p className="text-sm font-medium text-gray-600">
+              OTP sent to <span className="font-bold text-gray-900">{selectedCountryCode} {loginPhone}</span>
             </p>
 
-            <div className="relative group/input mb-6">
-              <div className="absolute -inset-1 bg-gradient-to-r from-mandi-primary to-mandi-accent rounded-2xl blur opacity-0 group-focus-within/input:opacity-30 transition duration-700"></div>
+            <div>
               <input
                 type="number"
-                placeholder="______"
+                placeholder="Enter 6-digit OTP"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
-                className="relative w-full bg-transparent border-b-2 border-slate-300 text-slate-900 p-5 text-2xl text-center tracking-[0.6em] transition-all duration-300 focus:outline-none focus:border-mandi-primary placeholder-slate-500 font-bold"
+                className="w-full bg-white border border-gray-300 p-4 rounded-lg text-center text-xl tracking-[0.4em] font-medium text-gray-800 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 focus:outline-none transition-all placeholder:tracking-normal placeholder:font-normal placeholder:text-gray-400"
                 maxLength={6}
               />
             </div>
 
-            <button onClick={handleVerifyOtp} disabled={isLoading} className="relative w-full overflow-hidden rounded-2xl group/btn active:scale-[0.97] transition-all duration-300 shadow-[0_8px_30px_rgba(16,185,129,0.4)] hover:shadow-[0_15px_40px_rgba(16,185,129,0.6)] disabled:opacity-70 disabled:active:scale-100">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-700 transition-all duration-500 group-hover/btn:scale-110 group-hover/btn:-rotate-1"></div>
-              <div className="relative flex items-center justify-center gap-2 p-5 text-white text-lg font-bold tracking-wide">
-                {isLoading ? (
-                  <span className="animate-spin text-xl">⏳</span>
-                ) : (
-                  <>
-                    Verify & Login
-                    <span className="text-xl drop-shadow-md">✨</span>
-                  </>
-                )}
-              </div>
+            <button 
+              onClick={handleVerifyOtp} 
+              disabled={isLoading} 
+              className="group relative w-full flex items-center justify-center gap-3 py-4 rounded-lg font-bold tracking-widest uppercase text-xs overflow-hidden border border-gray-900 text-gray-900 transition-colors duration-300 hover:text-white disabled:opacity-50 disabled:hover:text-gray-900 active:scale-[0.98]"
+            >
+              <div className="absolute inset-0 bg-gray-900 -translate-x-full group-hover:translate-x-0 group-disabled:hidden transition-transform duration-500 ease-out z-0"></div>
+              
+              {isLoading ? (
+                <span className="animate-spin text-xl z-10">⏳</span>
+              ) : (
+                <>
+                  <span className="z-10 relative">Verify & Login</span>
+                  <svg className="w-4 h-4 z-10 relative transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </>
+              )}
             </button>
           </div>
         )}
+
+        <div className="mt-8 text-xs text-gray-400">
+          &copy; {new Date().getFullYear()} Mandi App. All rights reserved.
+        </div>
       </div>
     </div>
   );
@@ -409,9 +481,31 @@ if (currentView === "profile") {
           </div>
         ))}
 
-        <button onClick={handleLogout} className="mt-6 w-full bg-red-50 text-red-600 font-bold py-3.5 rounded-2xl border border-red-200 shadow-sm active:scale-95 transition-transform">
+        <button 
+          onClick={() => window.open('https://wa.me/919676305084?text=' + encodeURIComponent('Hello! I need some support/feedback regarding the Mandi App.'), '_blank')}
+          className="mt-6 w-full bg-emerald-50 text-emerald-700 font-bold py-3.5 rounded-2xl border border-emerald-200 shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2"
+        >
+          <span className="text-xl">💬</span> Get Support & Feedback
+        </button>
+
+        <button onClick={handleLogout} className="mt-3 w-full bg-red-50 text-red-600 font-bold py-3.5 rounded-2xl border border-red-200 shadow-sm active:scale-95 transition-transform">
           Log Out
         </button>
+
+        {/* Creative Sticker Note */}
+        <div 
+          onClick={() => {
+            const shareText = "Hey! Check out Madannapet Mandi for premium farm-fresh produce and custom grocery delivery right to your doorstep. Order now! 🥦🛒 " + window.location.origin;
+            window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+          }}
+          className="mt-10 mb-4 mx-auto w-10/12 max-w-[280px] bg-amber-100/90 p-4 rounded-lg shadow-[2px_4px_10px_rgba(0,0,0,0.1)] -rotate-2 relative border border-amber-200/50 backdrop-blur-sm cursor-pointer hover:scale-105 hover:-rotate-3 active:scale-95 transition-all duration-300"
+        >
+          {/* Tape Effect */}
+          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-10 h-3.5 bg-white/60 -rotate-3 rounded-sm shadow-sm pointer-events-none"></div>
+          <p className="text-amber-900 font-serif italic text-center text-[13px] font-bold leading-relaxed m-0 pointer-events-none">
+            "Refer to others if you really care about them" ❤️
+          </p>
+        </div>
       </div>
 
       {/* Bottom Nav */}
@@ -629,7 +723,12 @@ return (
           <div className="space-y-3 mb-6">
             <input type="text" placeholder="Your Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-mandi-primary transition-colors" />
             <input type="tel" placeholder="Phone Number" value={phone} className="w-full p-4 bg-slate-100 text-slate-500 border border-slate-200 rounded-xl text-sm font-medium" disabled />
-            <textarea placeholder="Complete Delivery Address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-mandi-primary transition-colors min-h-[100px] resize-y" />
+            <div className="relative">
+              <textarea placeholder="Complete Delivery Address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-4 pb-14 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-mandi-primary transition-colors min-h-[120px] resize-y" />
+              <button onClick={() => setShowMapModal(true)} className="absolute bottom-3 left-3 bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 active:scale-95 transition-transform shadow-sm">
+                <span>📍</span> {mapCoords ? "Location Pinned" : "Pin Location on Map"}
+              </button>
+            </div>
           </div>
 
           <button onClick={placeOrder} className="w-full bg-mandi-primary text-white font-bold py-4 rounded-xl text-base shadow-lg active:scale-95 transition-transform">
@@ -665,6 +764,48 @@ return (
           </button>
         </div>
       </>
+    )}
+
+    {/* Map Modal */}
+    {showMapModal && (
+      <div className="fixed inset-0 z-[200] flex flex-col bg-slate-50 animate-slide-up-sheet max-w-[480px] mx-auto">
+        <div className="p-4 bg-white border-b border-slate-200 flex justify-between items-center shadow-sm">
+          <h3 className="m-0 text-lg font-bold">Pin Location</h3>
+          <button onClick={() => setShowMapModal(false)} className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full font-bold text-slate-600 active:bg-slate-200 border-none">✕</button>
+        </div>
+        <div className="flex-1 relative">
+          <MapContainer center={tempPosition} zoom={15} style={{ height: "100%", width: "100%", zIndex: 10 }}>
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+            <Marker position={tempPosition}></Marker>
+            <MapEventsHandler setPosition={setTempPosition} />
+            <LocateControl setPosition={setTempPosition} />
+          </MapContainer>
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-md border border-slate-200 text-xs font-bold text-slate-700 z-[1000] pointer-events-none whitespace-nowrap">
+            Tap map to move pin
+          </div>
+        </div>
+        <div className="p-4 bg-white border-t border-slate-200 pb-[calc(16px+env(safe-area-inset-bottom))] shadow-[0_-10px_20px_rgba(0,0,0,0.05)] relative z-20">
+          <button 
+            onClick={async () => {
+              setMapCoords(tempPosition);
+              setShowMapModal(false);
+              // Reverse Geocode
+              try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tempPosition[0]}&lon=${tempPosition[1]}`);
+                const data = await res.json();
+                if (data && data.display_name) {
+                  setAddress(data.display_name);
+                }
+              } catch(e) {
+                console.error("Geocoding failed", e);
+              }
+            }}
+            className="w-full bg-mandi-primary text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform text-sm"
+          >
+            Confirm Location
+          </button>
+        </div>
+      </div>
     )}
   </div>
   );
