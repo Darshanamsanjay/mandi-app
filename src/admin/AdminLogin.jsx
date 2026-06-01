@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logoAnimation from "../../Create_a_modern_premium_and.mp4";
 
 export default function AdminLogin({ onLogin }) {
   const [pin, setPin] = useState('');
@@ -17,11 +18,21 @@ export default function AdminLogin({ onLogin }) {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-sans">
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-10 border border-gray-100 text-center">
         
-        <img 
-          src="/logo.png" 
-          alt="Mandi App Logo" 
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          playsInline 
           className="w-56 mx-auto mb-10 object-contain mix-blend-multiply contrast-125 brightness-110" 
-        />
+          style={{ 
+            WebkitMaskImage: 'linear-gradient(to right, transparent, black 20%, black 80%, transparent), linear-gradient(to bottom, transparent, black 20%, black 80%, transparent)', 
+            WebkitMaskComposite: 'source-in',
+            maskImage: 'linear-gradient(to right, transparent, black 20%, black 80%, transparent), linear-gradient(to bottom, transparent, black 20%, black 80%, transparent)',
+            maskComposite: 'intersect'
+          }}
+        >
+          <source src={logoAnimation} type="video/mp4" />
+        </video>
         
         <h2 className="text-2xl font-bold text-gray-800 mb-2">Admin Portal</h2>
         <p className="text-gray-500 text-sm mb-8">Please enter your secure PIN to continue.</p>

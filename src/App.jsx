@@ -6,6 +6,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./index.css";
 import { countryCodes } from "./countryCodes";
+import logoAnimation from "../Create_a_modern_premium_and.mp4";
 
 // Fix for Leaflet default marker icon in Vite/React
 import iconUrl from "leaflet/dist/images/marker-icon.png";
@@ -308,11 +309,21 @@ if (!isAuthenticated) {
       
       <div className="w-full max-w-md bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-10 border border-white/20 text-center animate-fade-up relative z-10">
 
-        <img 
-          src="/logo.png" 
-          alt="Madannapet Mandi Logo" 
-          className="w-56 mx-auto mb-8 object-contain mix-blend-multiply contrast-125 brightness-110" 
-        />
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          playsInline 
+          className="w-72 sm:w-80 mx-auto mb-8 object-contain mix-blend-multiply contrast-125 brightness-110"
+          style={{ 
+            WebkitMaskImage: 'linear-gradient(to right, transparent, black 20%, black 80%, transparent), linear-gradient(to bottom, transparent, black 20%, black 80%, transparent)', 
+            WebkitMaskComposite: 'source-in',
+            maskImage: 'linear-gradient(to right, transparent, black 20%, black 80%, transparent), linear-gradient(to bottom, transparent, black 20%, black 80%, transparent)',
+            maskComposite: 'intersect'
+          }}
+        >
+          <source src={logoAnimation} type="video/mp4" />
+        </video>
         
         <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome Back</h2>
         <p className="text-gray-500 text-sm mb-8">Enter your mobile number to continue.</p>
@@ -335,19 +346,19 @@ if (!isAuthenticated) {
 
         {!otpStep ? (
           <div className="space-y-6 animate-fade-in">
-            <div className="flex items-stretch bg-white border border-gray-300 rounded-lg overflow-hidden focus-within:border-gray-900 focus-within:ring-1 focus-within:ring-gray-900 transition-all">
-              <div className="flex items-center justify-center bg-gray-50 border-r border-gray-200 text-gray-700 font-bold text-lg relative group/select cursor-pointer hover:bg-gray-100 transition-colors min-w-[110px]">
+            <div className="flex items-stretch bg-white border border-gray-300 rounded-lg overflow-hidden focus-within:border-gray-900 focus-within:ring-1 focus-within:ring-gray-900 transition-all w-full">
+              <div className="w-[25%] sm:w-1/5 flex items-center justify-center bg-gray-50 border-r border-gray-200 text-gray-700 font-semibold text-xs sm:text-base relative group/select cursor-pointer hover:bg-gray-100 transition-colors shrink-0">
                 <select
                   value={selectedCountryCode}
                   onChange={(e) => setSelectedCountryCode(e.target.value)}
-                  className="appearance-none bg-transparent outline-none cursor-pointer pl-4 pr-8 py-4 font-bold text-lg text-gray-700 w-full h-full z-10 focus:outline-none"
+                  className="appearance-none bg-transparent outline-none cursor-pointer pl-2 pr-5 sm:pl-3 sm:pr-7 py-4 text-xs sm:text-base font-semibold text-gray-700 w-full h-full z-10 focus:outline-none"
                 >
                   {countryCodes.map(c => (
                     <option key={c.name + c.code} value={c.code}>{c.flag} {c.code}</option>
                   ))}
                 </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 group-hover/select:text-gray-600 transition-colors z-0">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                <div className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 group-hover/select:text-gray-600 transition-colors z-0">
+                  <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
                 </div>
               </div>
               <input
@@ -355,7 +366,7 @@ if (!isAuthenticated) {
                 placeholder="Mobile Number"
                 value={loginPhone}
                 onChange={(e) => setLoginPhone(e.target.value)}
-                className="w-full p-4 pl-4 text-left text-xl tracking-[0.15em] font-medium text-gray-800 focus:outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-gray-400 bg-transparent"
+                className="w-[75%] sm:w-4/5 p-4 pl-3 text-left text-lg sm:text-xl tracking-[0.1em] sm:tracking-[0.15em] font-medium text-gray-800 focus:outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-gray-400 bg-transparent min-w-0"
                 maxLength={10}
               />
             </div>
@@ -457,7 +468,21 @@ if (currentView === "profile") {
           </div>
         ) : (
           <div className="bg-white p-6 rounded-2xl shadow-sm mb-5 text-center border border-slate-100 flex flex-col items-center">
-            <img src="/logo.png" alt="Logo" className="w-24 opacity-60 mb-2 object-contain mix-blend-multiply contrast-125 brightness-110" />
+            <video 
+              autoPlay 
+              loop 
+              muted 
+              playsInline 
+              className="w-24 opacity-60 mb-2 object-contain mix-blend-multiply contrast-125 brightness-110"
+              style={{ 
+                WebkitMaskImage: 'linear-gradient(to right, transparent, black 20%, black 80%, transparent), linear-gradient(to bottom, transparent, black 20%, black 80%, transparent)', 
+                WebkitMaskComposite: 'source-in',
+                maskImage: 'linear-gradient(to right, transparent, black 20%, black 80%, transparent), linear-gradient(to bottom, transparent, black 20%, black 80%, transparent)',
+                maskComposite: 'intersect'
+              }}
+            >
+              <source src={logoAnimation} type="video/mp4" />
+            </video>
             <p className="text-slate-500 text-sm font-medium">No active orders right now.</p>
           </div>
         )}
