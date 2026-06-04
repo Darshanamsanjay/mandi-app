@@ -334,7 +334,7 @@ if (!isAuthenticated) {
         {!otpStep ? (
           <div className="space-y-6 animate-fade-in">
             <div className="flex items-stretch bg-white border border-gray-300 rounded-lg overflow-hidden focus-within:border-gray-900 focus-within:ring-1 focus-within:ring-gray-900 transition-all w-full">
-              <div className="w-[25%] sm:w-1/5 flex items-center justify-center bg-gray-50 border-r border-gray-200 text-gray-700 font-semibold text-xs sm:text-base relative group/select cursor-pointer hover:bg-gray-100 transition-colors shrink-0">
+              <div className="w-[85px] sm:w-[100px] flex items-center justify-center bg-gray-50 border-r border-gray-200 text-gray-700 font-semibold text-xs sm:text-base relative group/select cursor-pointer hover:bg-gray-100 transition-colors shrink-0">
                 <select
                   value={selectedCountryCode}
                   onChange={(e) => setSelectedCountryCode(e.target.value)}
@@ -353,7 +353,7 @@ if (!isAuthenticated) {
                 placeholder="Mobile Number"
                 value={loginPhone}
                 onChange={(e) => setLoginPhone(e.target.value)}
-                className="w-[75%] sm:w-4/5 p-4 pl-3 text-left text-lg sm:text-xl tracking-[0.1em] sm:tracking-[0.15em] font-medium text-gray-800 focus:outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-gray-400 bg-transparent min-w-0"
+                className="flex-1 p-4 pl-3 text-left text-lg sm:text-xl tracking-[0.1em] sm:tracking-[0.15em] font-medium text-gray-800 focus:outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-gray-400 bg-transparent min-w-0"
                 maxLength={10}
               />
             </div>
