@@ -291,24 +291,9 @@ const placeOrder = async () => {
 // --- Login View ---
 if (!isAuthenticated) {
   return (
-    <div className="w-full min-h-screen flex items-center justify-center p-6 font-sans relative overflow-hidden">
+    <div className="w-full min-h-screen flex items-center justify-center p-6 font-sans relative overflow-hidden bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-100 via-emerald-300 to-emerald-500">
       
-      {/* Professional Full Background Video */}
-      <video
-        autoPlay
-        loop
-        muted
-        defaultMuted
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover z-0"
-      >
-        <source src="/Login page video.mp4" type="video/mp4" />
-      </video>
-
-      {/* Clean Dark Overlay for Cinematic Feel */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-0"></div>
-      
-      <div className="w-full max-w-md bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-10 border border-white/20 text-center animate-fade-up relative z-10">
+      <div className="w-full max-w-md bg-white/95 backdrop-blur-md rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.1)] p-10 border border-white/40 text-center animate-fade-up relative z-10">
 
         <video 
           autoPlay 
