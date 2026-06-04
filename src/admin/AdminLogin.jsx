@@ -22,6 +22,7 @@ export default function AdminLogin({ onLogin }) {
           autoPlay 
           loop 
           muted 
+          defaultMuted
           playsInline 
           className="w-56 mx-auto mb-10 object-contain mix-blend-multiply contrast-125 brightness-110" 
           style={{ 

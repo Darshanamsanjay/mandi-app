@@ -298,6 +298,7 @@ if (!isAuthenticated) {
         autoPlay
         loop
         muted
+        defaultMuted
         playsInline
         className="absolute inset-0 w-full h-full object-cover z-0"
       >
@@ -313,6 +314,7 @@ if (!isAuthenticated) {
           autoPlay 
           loop 
           muted 
+          defaultMuted
           playsInline 
           className="w-72 sm:w-80 mx-auto mb-8 object-contain mix-blend-multiply contrast-125 brightness-110"
           style={{ 
@@ -472,6 +474,7 @@ if (currentView === "profile") {
               autoPlay 
               loop 
               muted 
+              defaultMuted
               playsInline 
               className="w-24 opacity-60 mb-2 object-contain mix-blend-multiply contrast-125 brightness-110"
               style={{ 
