@@ -135,68 +135,95 @@ export default function MapModal({ onClose, onConfirm }) {
     } catch(e) {
       callbackExecuted = true;
       clearTimeout(timeoutId);
-      console.error("[Mappls] Geocoding exception:", e);
+      console.error("========== GEOCODING EXCEPTION ==========");
+      console.error("Error Object:", e);
+      if (e instanceof Error) {
+        console.error("Error Name:", e.name);
+        console.error("Error Message:", e.message);
+        console.error("Error Stack:", e.stack);
+      }
       setAddress("Error fetching address. Please try again.");
       setIsGeocoding(false);
     }
   };
 
-  const handleUseCurrentLocation = () => {
-    console.log("[GPS] Requesting browser geolocation...");
+  const handleUseCurrentLocation = async () => {
+    console.log("========== CURRENT LOCATION DEBUG FLOW ==========");
+    console.log("[1] Button clicked. Requesting browser geolocation...");
+
+    // Check permissions
+    try {
+      if (navigator.permissions && navigator.permissions.query) {
+        const perm = await navigator.permissions.query({ name: 'geolocation' });
+        console.log("[2] Geolocation Permission Status:", perm.state);
+      } else {
+        console.log("[2] Permissions API not supported, proceeding to request...");
+      }
+    } catch(e) {
+      console.log("[2] Could not query permissions:", e);
+    }
+
     if (navigator.geolocation) {
       setIsGeocoding(true);
       setAddress("Detecting your location...");
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          console.log("[GPS] Exact coordinates received from navigator:", { latitude, longitude });
+          console.log("[3] SUCCESS: Coordinates received from navigator:", { latitude, longitude });
           
           try {
             if (markerRef.current) {
-              console.log("[Map] Moving marker to:", { lat: latitude, lng: longitude });
+              console.log("[4] Moving marker to:", { lat: latitude, lng: longitude });
               markerRef.current.setPosition({ lat: latitude, lng: longitude });
-              console.log("[Map] Marker moved successfully.");
+              console.log("[4] Marker moved successfully.");
+            } else {
+              console.warn("[4] Marker ref is null!");
             }
           } catch (err) {
-            console.error("[Map] Failed to move marker:", err);
+            console.error("[4] FAILED to move marker:", err);
           }
 
           try {
             if (mapRef.current) {
-              console.log("[Map] Attempting to center map to:", { lat: latitude, lng: longitude });
+              console.log("[5] Attempting to center map to:", { lat: latitude, lng: longitude });
               if (typeof mapRef.current.panTo === "function") {
-                 console.log("[Map] Using panTo()");
+                 console.log("[5] Using mapRef.current.panTo()");
                  mapRef.current.panTo({ lat: latitude, lng: longitude });
               } else if (typeof mapRef.current.setCenter === "function") {
-                 console.log("[Map] Using setCenter()");
+                 console.log("[5] Using mapRef.current.setCenter()");
                  mapRef.current.setCenter({ lat: latitude, lng: longitude });
+              } else {
+                 console.warn("[5] Map reference does not have panTo or setCenter functions!");
               }
-              console.log("[Map] Map centered successfully.");
+              console.log("[5] Map centered successfully.");
+            } else {
+              console.warn("[5] Map ref is null!");
             }
           } catch (err) {
-            console.error("[Map] Failed to center map. API might not support this format:", err);
-            // Fallback to array format just in case Mappls strictly wants [lng, lat]
+            console.error("[5] FAILED to center map with object format:", err);
             try {
-               console.log("[Map] Fallback: Trying setCenter with array [longitude, latitude]...");
+               console.log("[5] Fallback: Trying setCenter with array [longitude, latitude]...");
                mapRef.current.setCenter([longitude, latitude]);
             } catch (fallbackErr) {
-               console.error("[Map] Fallback failed too:", fallbackErr);
+               console.error("[5] Fallback failed too:", fallbackErr);
             }
           }
 
-          console.log("[Mappls] Triggering handleLocationChange to reverse geocode...");
+          console.log("[6] Triggering handleLocationChange to reverse geocode:", { latitude, longitude });
           handleLocationChange(latitude, longitude);
         },
         (error) => {
-          console.warn("[GPS] Geolocation error:", error);
-          alert("Could not fetch your location. Please check your permissions.");
+          console.error("========== GEOLOCATION FAILED ==========");
+          console.error("Error Code:", error.code);
+          console.error("Error Message:", error.message);
+          alert(`Could not fetch your location. Error: ${error.message}`);
           setIsGeocoding(false);
           setAddress("Please confirm location manually.");
         },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     } else {
-      console.warn("[GPS] Browser does not support geolocation.");
+      console.error("========== GEOLOCATION NOT SUPPORTED ==========");
       alert("Geolocation is not supported by your browser.");
     }
   };
