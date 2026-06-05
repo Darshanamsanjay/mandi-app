@@ -9,6 +9,7 @@ import LocationPicker from "./components/LocationPicker";
 import MapModal from "./components/MapModal";
 import LocationBar from "./components/LocationBar";
 import { isWithinDeliveryZone } from "./utils/DeliveryZoneValidator";
+import { mappls } from "mappls-web-maps";
 
 export default function App() {
   const [products, setProducts] = useState([]);
@@ -112,6 +113,52 @@ const handleConfirmLocation = async ({ address, lat, lng }) => {
   }
 };
 
+const requestAndSetLocation = () => {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const outOfZone = !isWithinDeliveryZone(latitude, longitude);
+
+        const applyLocation = (fetchedAddress) => {
+          handleConfirmLocation({ address: fetchedAddress, lat: latitude, lng: longitude });
+          if (outOfZone) {
+            alert("Mee location maa 5 KM delivery zone bayata undi. Tvaralo mee area ki kuda services teesukostham.");
+          }
+        };
+
+        const performGeocode = () => {
+          if (window.mappls_plugin && window.mappls_plugin.rev_geocode) {
+             window.mappls_plugin.rev_geocode({ lat: latitude, lng: longitude }, (data) => {
+               let fetchedAddress = "Current Location";
+               if (data && data.results && data.results.length > 0) fetchedAddress = data.results[0].formatted_address;
+               else if (data && data.copResults) fetchedAddress = data.copResults.formattedAddress;
+               applyLocation(fetchedAddress);
+             });
+          } else {
+             applyLocation("Current Location");
+          }
+        };
+
+        if (typeof window.mappls_plugin !== "undefined") {
+           performGeocode();
+        } else {
+           const token = "bweqhgqhltgaltkwaexwsdgotghvblzvqjuk";
+           try {
+             const m = new mappls();
+             m.initialize(token, { map: true }, performGeocode);
+           } catch(err) {
+             applyLocation("Current Location");
+           }
+        }
+      },
+      (error) => {
+        console.warn("Geolocation permission denied or failed:", error);
+      }
+    );
+  }
+};
+
 // Orders State
 const [activeOrder, setActiveOrder] = useState(null);
 const [pastOrders, setPastOrders] = useState([]);
@@ -201,6 +248,7 @@ const handleVerifyOtp = () => {
       setIsAuthenticated(true);
       localStorage.setItem("mandi_user_phone", loginPhone);
       localStorage.setItem("mandi_user_login_time", Date.now().toString());
+      requestAndSetLocation();
     } else {
       setAuthError("Invalid OTP. Please try again.");
     }
