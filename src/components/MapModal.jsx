@@ -80,7 +80,7 @@ export default function MapModal({ onClose, onConfirm }) {
     // Check distance
     if (!isWithinDeliveryZone(lat, lng)) {
       setIsOutOfArea(true);
-      setAddress("⚠️ We currently do not deliver to this location.");
+      setAddress("⚠️ Sorry! Mee location maa 5 KM delivery zone bayata undi. Prastutam maa services available levu.");
       setIsGeocoding(false);
       return;
     } else {
@@ -111,6 +111,36 @@ export default function MapModal({ onClose, onConfirm }) {
     }
   };
 
+  const handleUseCurrentLocation = () => {
+    if (navigator.geolocation) {
+      setIsGeocoding(true);
+      setAddress("Detecting your location...");
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          if (markerRef.current) {
+            markerRef.current.setPosition({ lat: latitude, lng: longitude });
+          }
+          if (mapRef.current && mapRef.current.panTo) {
+             mapRef.current.panTo([latitude, longitude]);
+          } else if (mapRef.current && mapRef.current.setCenter) {
+             mapRef.current.setCenter([latitude, longitude]);
+          }
+          handleLocationChange(latitude, longitude);
+        },
+        (error) => {
+          console.warn("Geolocation error:", error);
+          alert("Could not fetch your location. Please check your permissions.");
+          setIsGeocoding(false);
+          setAddress("Please confirm location manually.");
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    } else {
+      alert("Geolocation is not supported by your browser.");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex flex-col bg-slate-50 animate-slide-up-sheet max-w-[480px] mx-auto">
       <div className="p-4 bg-white border-b border-slate-200 flex justify-between items-center shadow-sm">
@@ -123,6 +153,16 @@ export default function MapModal({ onClose, onConfirm }) {
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-md border border-slate-200 text-xs font-bold text-slate-700 z-[1000] pointer-events-none whitespace-nowrap">
           Tap map to move pin
         </div>
+        
+        {/* Floating Current Location Button */}
+        <button 
+          onClick={handleUseCurrentLocation}
+          className="absolute bottom-4 right-4 z-[1000] bg-white text-mandi-primary p-3 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-slate-100 flex items-center justify-center active:scale-95 transition-transform"
+        >
+          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" />
+          </svg>
+        </button>
       </div>
       
       <div className="p-4 bg-white border-t border-slate-200 pb-[calc(16px+env(safe-area-inset-bottom))] shadow-[0_-10px_20px_rgba(0,0,0,0.05)] relative z-20">

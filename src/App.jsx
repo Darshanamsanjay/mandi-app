@@ -123,7 +123,7 @@ const requestAndSetLocation = () => {
         const applyLocation = (fetchedAddress) => {
           handleConfirmLocation({ address: fetchedAddress, lat: latitude, lng: longitude });
           if (outOfZone) {
-            alert("Mee location maa 5 KM delivery zone bayata undi. Tvaralo mee area ki kuda services teesukostham.");
+            alert("Sorry! Mee location maa 5 KM delivery zone bayata undi. Prastutam maa services available levu.");
           }
         };
 
