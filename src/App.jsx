@@ -128,34 +128,57 @@ const requestAndSetLocation = () => {
         };
 
         const performGeocode = () => {
-          if (window.mappls_plugin && window.mappls_plugin.rev_geocode) {
-             window.mappls_plugin.rev_geocode({ lat: latitude, lng: longitude }, (data) => {
-               let fetchedAddress = "Current Location";
-               if (data && data.results && data.results.length > 0) fetchedAddress = data.results[0].formatted_address;
-               else if (data && data.copResults) fetchedAddress = data.copResults.formattedAddress;
-               applyLocation(fetchedAddress);
-             });
-          } else {
-             applyLocation("Current Location");
+          try {
+            if (window.mappls_plugin && window.mappls_plugin.rev_geocode) {
+               window.mappls_plugin.rev_geocode({ lat: latitude, lng: longitude }, (data) => {
+                 let fetchedAddress = "Your Current Location";
+                 if (data && data.results && data.results.length > 0) fetchedAddress = data.results[0].formatted_address;
+                 else if (data && data.copResults) fetchedAddress = data.copResults.formattedAddress;
+                 applyLocation(fetchedAddress);
+               });
+            } else {
+               applyLocation("Your Current Location");
+            }
+          } catch(e) {
+             applyLocation("Your Current Location");
+          }
+        };
+
+        // Fallback timeout in case initialization hangs
+        let geocodeDone = false;
+        const safeApply = (addr) => {
+          if (!geocodeDone) {
+            geocodeDone = true;
+            applyLocation(addr);
           }
         };
 
         if (typeof window.mappls_plugin !== "undefined") {
            performGeocode();
+           geocodeDone = true;
         } else {
            const token = "bweqhgqhltgaltkwaexwsdgotghvblzvqjuk";
            try {
              const m = new mappls();
-             m.initialize(token, { map: true }, performGeocode);
+             m.initialize(token, { map: true }, () => {
+               if (!geocodeDone) performGeocode();
+               geocodeDone = true;
+             });
+             // Safety timeout: if mappls doesn't load in 2s, apply raw coordinates
+             setTimeout(() => safeApply("Your Current Location"), 2000);
            } catch(err) {
-             applyLocation("Current Location");
+             safeApply("Your Current Location");
            }
         }
       },
       (error) => {
         console.warn("Geolocation permission denied or failed:", error);
-      }
+        alert("Could not fetch your location. Please select it manually.");
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
+  } else {
+    alert("Geolocation is not supported by your browser.");
   }
 };
 
