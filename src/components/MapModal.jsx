@@ -20,14 +20,11 @@ export default function MapModal({ onClose, onConfirm }) {
     if (isInitialized.current) return;
     isInitialized.current = true;
 
-    // Call it immediately so the address starts fetching even if map script fails
-    handleLocationChange(MANDI_COORDS.lat, MANDI_COORDS.lng);
-
     const token = "bweqhgqhltgaltkwaexwsdgotghvblzvqjuk";
     
     try {
       const mapplsClassObject = new mappls();
-      mapplsClassObject.initialize(token, { map: true }, () => {
+      mapplsClassObject.initialize(token, { map: true, plugins: ['rev_geocode'] }, () => {
         // Map initialization
         const mapObject = mapplsClassObject.Map({
           id: mapContainerRef.current.id,
@@ -62,6 +59,9 @@ export default function MapModal({ onClose, onConfirm }) {
             handleLocationChange(pos.lat, pos.lng);
           }
         });
+
+        // Fetch address for initial position ONLY after map is loaded
+        handleLocationChange(MANDI_COORDS.lat, MANDI_COORDS.lng);
       });
     } catch(err) {
       console.error("Map initialization failed:", err);
