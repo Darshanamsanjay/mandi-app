@@ -122,9 +122,9 @@ export default function MapModal({ onClose, onConfirm }) {
             markerRef.current.setPosition({ lat: latitude, lng: longitude });
           }
           if (mapRef.current && mapRef.current.panTo) {
-             mapRef.current.panTo([latitude, longitude]);
+             mapRef.current.panTo({ lat: latitude, lng: longitude });
           } else if (mapRef.current && mapRef.current.setCenter) {
-             mapRef.current.setCenter([latitude, longitude]);
+             mapRef.current.setCenter({ lat: latitude, lng: longitude });
           }
           handleLocationChange(latitude, longitude);
         },
