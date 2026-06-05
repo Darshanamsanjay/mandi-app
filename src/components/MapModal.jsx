@@ -149,17 +149,42 @@ export default function MapModal({ onClose, onConfirm }) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          console.log("[GPS] Coordinates received:", { latitude, longitude });
-          if (markerRef.current) {
-            markerRef.current.setPosition({ lat: latitude, lng: longitude });
+          console.log("[GPS] Exact coordinates received from navigator:", { latitude, longitude });
+          
+          try {
+            if (markerRef.current) {
+              console.log("[Map] Moving marker to:", { lat: latitude, lng: longitude });
+              markerRef.current.setPosition({ lat: latitude, lng: longitude });
+              console.log("[Map] Marker moved successfully.");
+            }
+          } catch (err) {
+            console.error("[Map] Failed to move marker:", err);
           }
-          if (mapRef.current && mapRef.current.panTo) {
-             console.log("[Map] Panning map to location...");
-             mapRef.current.panTo({ lat: latitude, lng: longitude });
-          } else if (mapRef.current && mapRef.current.setCenter) {
-             console.log("[Map] Setting center to location...");
-             mapRef.current.setCenter({ lat: latitude, lng: longitude });
+
+          try {
+            if (mapRef.current) {
+              console.log("[Map] Attempting to center map to:", { lat: latitude, lng: longitude });
+              if (typeof mapRef.current.panTo === "function") {
+                 console.log("[Map] Using panTo()");
+                 mapRef.current.panTo({ lat: latitude, lng: longitude });
+              } else if (typeof mapRef.current.setCenter === "function") {
+                 console.log("[Map] Using setCenter()");
+                 mapRef.current.setCenter({ lat: latitude, lng: longitude });
+              }
+              console.log("[Map] Map centered successfully.");
+            }
+          } catch (err) {
+            console.error("[Map] Failed to center map. API might not support this format:", err);
+            // Fallback to array format just in case Mappls strictly wants [lng, lat]
+            try {
+               console.log("[Map] Fallback: Trying setCenter with array [longitude, latitude]...");
+               mapRef.current.setCenter([longitude, latitude]);
+            } catch (fallbackErr) {
+               console.error("[Map] Fallback failed too:", fallbackErr);
+            }
           }
+
+          console.log("[Mappls] Triggering handleLocationChange to reverse geocode...");
           handleLocationChange(latitude, longitude);
         },
         (error) => {
