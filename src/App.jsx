@@ -1,53 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "./firebase";
-import { collection, onSnapshot, doc, query, where, writeBatch, increment } from "firebase/firestore";
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { collection, onSnapshot, doc, query, where, writeBatch, increment, setDoc } from "firebase/firestore";
 import "./index.css";
 import { countryCodes } from "./countryCodes";
 import logoAnimation from "../Create_a_modern_premium_and.mp4";
 
-// Fix for Leaflet default marker icon in Vite/React
-import iconUrl from "leaflet/dist/images/marker-icon.png";
-import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
-import shadowUrl from "leaflet/dist/images/marker-shadow.png";
-
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl,
-  iconUrl,
-  shadowUrl,
-});
-
-function MapEventsHandler({ setPosition }) {
-  useMapEvents({
-    click(e) {
-      setPosition([e.latlng.lat, e.latlng.lng]);
-    },
-  });
-  return null;
-}
-
-function LocateControl({ setPosition }) {
-  const map = useMap();
-  return (
-    <div className="absolute bottom-4 right-4 z-[1000]">
-      <button 
-        onClick={(e) => {
-          e.preventDefault();
-          map.locate().on("locationfound", function (e) {
-            setPosition([e.latlng.lat, e.latlng.lng]);
-            map.flyTo(e.latlng, map.getZoom());
-          });
-        }}
-        className="bg-white text-slate-800 p-3 rounded-full shadow-lg border border-slate-200 active:scale-95 flex items-center justify-center font-bold text-xl"
-      >
-        📍
-      </button>
-    </div>
-  );
-}
+import LocationPicker from "./components/LocationPicker";
+import MapModal from "./components/MapModal";
+import LocationBar from "./components/LocationBar";
+import { isWithinDeliveryZone } from "./utils/DeliveryZoneValidator";
 
 export default function App() {
   const [products, setProducts] = useState([]);
@@ -121,12 +82,35 @@ const [cart, setCart] = useState([]);
 const [showCart, setShowCart] = useState(false);
 
 // Checkout State
-const [customerName, setCustomerName] = useState("");
+const [customerName, setCustomerName] = useState(() => localStorage.getItem("mandi_user_name") || "");
 const [phone, setPhone] = useState("");
-const [address, setAddress] = useState("");
-const [mapCoords, setMapCoords] = useState(null);
+const [address, setAddress] = useState(() => localStorage.getItem("mandi_user_address") || "");
+const [mapCoords, setMapCoords] = useState(() => {
+  const saved = localStorage.getItem("mandi_user_coords");
+  return saved ? JSON.parse(saved) : null;
+});
 const [showMapModal, setShowMapModal] = useState(false);
 const [tempPosition, setTempPosition] = useState([17.3616, 78.4747]); // Default Hyderabad
+
+const handleConfirmLocation = async ({ address, lat, lng }) => {
+  setAddress(address);
+  const coords = [lat, lng];
+  setMapCoords(coords);
+  localStorage.setItem("mandi_user_address", address);
+  localStorage.setItem("mandi_user_coords", JSON.stringify(coords));
+  setShowMapModal(false);
+
+  if (loginPhone) {
+    try {
+      await setDoc(doc(db, 'users', loginPhone), {
+        defaultAddress: address,
+        defaultCoords: coords
+      }, { merge: true });
+    } catch(e) {
+      console.error("Failed to save location to Firestore", e);
+    }
+  }
+};
 
 // Orders State
 const [activeOrder, setActiveOrder] = useState(null);
@@ -139,6 +123,36 @@ useEffect(() => {
       const userOrders = snapshot.docs.map(doc => ({ ...doc.data(), firestoreId: doc.id }));
       userOrders.sort((a,b) => b.timestamp - a.timestamp);
       setPastOrders(userOrders);
+
+      // Auto-fill details from latest order if currently empty
+      if (userOrders.length > 0) {
+        const latest = userOrders[0];
+        
+        setCustomerName(prev => {
+          if (!prev && latest.customerName) {
+            localStorage.setItem("mandi_user_name", latest.customerName);
+            return latest.customerName;
+          }
+          return prev;
+        });
+
+        setAddress(prev => {
+          if (!prev && latest.address) {
+            localStorage.setItem("mandi_user_address", latest.address);
+            return latest.address;
+          }
+          return prev;
+        });
+
+        setMapCoords(prev => {
+          if (!prev && latest.mapCoords) {
+            localStorage.setItem("mandi_user_coords", JSON.stringify(latest.mapCoords));
+            return latest.mapCoords;
+          }
+          return prev;
+        });
+      }
+
       const active = userOrders.find(o => !o.status.includes('Delivered') && !o.status.includes('Cancelled'));
       setActiveOrder(active || null);
     });
@@ -211,6 +225,16 @@ const availableProducts = products.filter(p => p.stock === undefined || p.stock 
 const filteredProducts = activeCategory === "All" ? availableProducts : availableProducts.filter(p => p.category === activeCategory);
 
 const addToCart = (product) => {
+  if (!mapCoords || !address) {
+    alert("Please select a delivery location first.");
+    setShowMapModal(true);
+    return;
+  }
+  if (!isWithinDeliveryZone(mapCoords[0], mapCoords[1])) {
+    alert("Service is currently unavailable in your area.");
+    return;
+  }
+
   const existing = cart.find(item => item.id === product.id);
   if (existing) setCart(cart.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item));
   else setCart([...cart, { ...product, quantity: 1 }]);
@@ -240,12 +264,17 @@ const isFreeGiftUnlocked = subtotal >= 500;
 const placeOrder = async () => {
   if (!customerName || !phone || !address) return alert("Fill all delivery details.");
 
+  // Save name for next time
+  localStorage.setItem("mandi_user_name", customerName);
+
   const newOrder = {
     id: "#ORD-" + Math.floor(Math.random() * 9000 + 1000),
     customerName,
     phone,
     address,
     mapCoords,
+    latitude: mapCoords ? mapCoords[0] : null,
+    longitude: mapCoords ? mapCoords[1] : null,
     items: cart,
     total: total,
     status: "📦 Preparing",
@@ -540,6 +569,12 @@ if (currentView === "profile") {
 return (
   <div className="w-full max-w-[480px] mx-auto min-h-screen bg-slate-50 pb-[calc(100px+env(safe-area-inset-bottom))] relative shadow-xl overflow-x-hidden">
 
+    <LocationBar 
+      address={address} 
+      mapCoords={mapCoords} 
+      onClick={() => setShowMapModal(true)} 
+    />
+
     {/* Panorama Header */}
     <div className="w-full h-[220px] relative overflow-hidden rounded-b-[2rem] shadow-sm mb-4">
       <div className="w-[200%] h-full absolute top-0 left-0 bg-cover bg-center animate-panorama" style={{ backgroundImage: `url(${panoramaImg})` }}></div>
@@ -736,12 +771,11 @@ return (
           <div className="space-y-3 mb-6">
             <input type="text" placeholder="Your Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-mandi-primary transition-colors" />
             <input type="tel" placeholder="Phone Number" value={phone} className="w-full p-4 bg-slate-100 text-slate-500 border border-slate-200 rounded-xl text-sm font-medium" disabled />
-            <div className="relative">
-              <textarea placeholder="Complete Delivery Address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-4 pb-14 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-mandi-primary transition-colors min-h-[120px] resize-y" />
-              <button onClick={() => setShowMapModal(true)} className="absolute bottom-3 left-3 bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 active:scale-95 transition-transform shadow-sm">
-                <span>📍</span> {mapCoords ? "Location Pinned" : "Pin Location on Map"}
-              </button>
-            </div>
+            <LocationPicker 
+              address={address} 
+              mapCoords={mapCoords} 
+              onOpenMap={() => setShowMapModal(true)} 
+            />
           </div>
 
           <button onClick={placeOrder} className="w-full bg-mandi-primary text-white font-bold py-4 rounded-xl text-base shadow-lg active:scale-95 transition-transform">
@@ -781,44 +815,10 @@ return (
 
     {/* Map Modal */}
     {showMapModal && (
-      <div className="fixed inset-0 z-[200] flex flex-col bg-slate-50 animate-slide-up-sheet max-w-[480px] mx-auto">
-        <div className="p-4 bg-white border-b border-slate-200 flex justify-between items-center shadow-sm">
-          <h3 className="m-0 text-lg font-bold">Pin Location</h3>
-          <button onClick={() => setShowMapModal(false)} className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full font-bold text-slate-600 active:bg-slate-200 border-none">✕</button>
-        </div>
-        <div className="flex-1 relative">
-          <MapContainer center={tempPosition} zoom={15} style={{ height: "100%", width: "100%", zIndex: 10 }}>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
-            <Marker position={tempPosition}></Marker>
-            <MapEventsHandler setPosition={setTempPosition} />
-            <LocateControl setPosition={setTempPosition} />
-          </MapContainer>
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-md border border-slate-200 text-xs font-bold text-slate-700 z-[1000] pointer-events-none whitespace-nowrap">
-            Tap map to move pin
-          </div>
-        </div>
-        <div className="p-4 bg-white border-t border-slate-200 pb-[calc(16px+env(safe-area-inset-bottom))] shadow-[0_-10px_20px_rgba(0,0,0,0.05)] relative z-20">
-          <button 
-            onClick={async () => {
-              setMapCoords(tempPosition);
-              setShowMapModal(false);
-              // Reverse Geocode
-              try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tempPosition[0]}&lon=${tempPosition[1]}`);
-                const data = await res.json();
-                if (data && data.display_name) {
-                  setAddress(data.display_name);
-                }
-              } catch(e) {
-                console.error("Geocoding failed", e);
-              }
-            }}
-            className="w-full bg-mandi-primary text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform text-sm"
-          >
-            Confirm Location
-          </button>
-        </div>
-      </div>
+      <MapModal 
+        onClose={() => setShowMapModal(false)}
+        onConfirm={handleConfirmLocation}
+      />
     )}
   </div>
   );

@@ -15,6 +15,7 @@
     "@capacitor/core": "^8.3.4",
     "firebase": "^12.13.0",
     "leaflet": "^1.9.4",
+    "mappls-web-maps": "^3.8.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-leaflet": "^5.0.0"
