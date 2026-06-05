@@ -131,7 +131,7 @@ export default function MapModal({ onClose, onConfirm }) {
                setAddress(data.copResults.formattedAddress);
                if (autoConfirm) onConfirm(data.copResults.formattedAddress, { lat, lng });
              } else {
-               setAddress("Could not fetch address for this location.");
+               throw new Error("No results from Mappls");
              }
              setIsGeocoding(false);
            });
@@ -152,7 +152,7 @@ export default function MapModal({ onClose, onConfirm }) {
           setAddress(data.copResults.formattedAddress);
           if (autoConfirm) onConfirm(data.copResults.formattedAddress, { lat, lng });
         } else {
-          setAddress("Could not fetch address for this location.");
+          throw new Error("No results from Mappls");
         }
         setIsGeocoding(false);
       });
@@ -161,13 +161,25 @@ export default function MapModal({ onClose, onConfirm }) {
       clearTimeout(timeoutId);
       console.error("========== GEOCODING EXCEPTION ==========");
       console.error("Error Object:", e);
-      if (e instanceof Error) {
-        console.error("Error Name:", e.name);
-        console.error("Error Message:", e.message);
-        console.error("Error Stack:", e.stack);
-      }
-      setAddress("Error fetching address. Please try again.");
-      setIsGeocoding(false);
+      console.log("[Fallback] Trying OpenStreetMap Nominatim...");
+      
+      // Fallback to open source geocoder if Mappls fails
+      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+        .then(res => res.json())
+        .then(data => {
+           if (data && data.display_name) {
+             setAddress(data.display_name);
+             if (autoConfirm) onConfirm(data.display_name, { lat, lng });
+           } else {
+             setAddress("Could not fetch address for this location.");
+           }
+           setIsGeocoding(false);
+        })
+        .catch(err => {
+           console.error("[Fallback] Nominatim also failed:", err);
+           setAddress("Error fetching address. Please try again.");
+           setIsGeocoding(false);
+        });
     }
   };
 
