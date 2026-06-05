@@ -103,8 +103,11 @@ const handleConfirmLocation = async ({ address, lat, lng }) => {
 
   if (loginPhone) {
     try {
+      const safeAddress = address || (lat !== undefined && lng !== undefined ? `${lat}, ${lng}` : "Location Selected");
+      console.log("[Firestore] Saving defaultAddress:", safeAddress);
+      
       await setDoc(doc(db, 'users', loginPhone), {
-        defaultAddress: address,
+        defaultAddress: safeAddress,
         defaultCoords: coords
       }, { merge: true });
     } catch(e) {

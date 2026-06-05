@@ -94,8 +94,6 @@ export default function MapModal({ onClose, onConfirm }) {
       setIsOutOfArea(true);
       setAddress("⚠️ Sorry! Mee location maa 5 KM delivery zone bayata undi. Prastutam maa services available levu.");
       setIsGeocoding(false);
-      // We explicitly do NOT auto-confirm if they are out of the zone
-      // so they can see the error message.
       return;
     } else {
       setIsOutOfArea(false);
@@ -103,112 +101,29 @@ export default function MapModal({ onClose, onConfirm }) {
 
     setIsGeocoding(true);
     setAddress("Fetching address...");
-    console.log("[Mappls] Reverse geocoding for:", { lat, lng });
-    
-    // Failsafe timeout in case API silently fails (CORS, 401, etc.)
-    let callbackExecuted = false;
-    const timeoutId = setTimeout(() => {
-      if (!callbackExecuted) {
-        console.error("[Mappls] Reverse geocoding timed out. This is likely a CORS or 401 Unauthorized error due to Domain Whitelisting on Vercel.");
-        setAddress("Error fetching address. Ensure domain is whitelisted.");
-        setIsGeocoding(false);
-      }
-    }, 5000);
+    console.log("[Nominatim] Reverse geocoding for:", { lat, lng });
 
-    try {
-      if (typeof mappls_plugin === "undefined" || !mappls_plugin.rev_geocode) {
-        // Fallback to window.mappls_plugin just in case
-        if (typeof window.mappls_plugin !== "undefined" && window.mappls_plugin.rev_geocode) {
-           window.mappls_plugin.rev_geocode({ lat: lat, lng: lng }, (data) => {
-             callbackExecuted = true;
-             clearTimeout(timeoutId);
-             console.log("[Mappls] Geocode response (window):", data);
-             
-             if (data && data.results && data.results.length > 0) {
-               setAddress(data.results[0].formatted_address);
-               if (autoConfirm) onConfirm(data.results[0].formatted_address, { lat, lng });
-             } else if (data && data.copResults) {
-               setAddress(data.copResults.formattedAddress);
-               if (autoConfirm) onConfirm(data.copResults.formattedAddress, { lat, lng });
-             } else {
-               throw new Error("No results from Mappls");
-             }
-             setIsGeocoding(false);
-           });
-           return;
-        }
-        throw new Error("Mappls plugin not loaded from NPM or Window. Ensure token is valid.");
-      }
-      
-      mappls_plugin.rev_geocode({ lat: lat, lng: lng }, (data) => {
-        callbackExecuted = true;
-        clearTimeout(timeoutId);
-        console.log("[Mappls] Geocode response (NPM):", data);
-        
-        if (data && data.results && data.results.length > 0) {
-          setAddress(data.results[0].formatted_address);
-          if (autoConfirm) onConfirm(data.results[0].formatted_address, { lat, lng });
-        } else if (data && data.copResults) {
-          setAddress(data.copResults.formattedAddress);
-          if (autoConfirm) onConfirm(data.copResults.formattedAddress, { lat, lng });
-        } else {
-          throw new Error("No results from Mappls");
-        }
-        setIsGeocoding(false);
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+      .then(res => res.json())
+      .then(data => {
+         if (data && data.display_name) {
+           setAddress(data.display_name);
+           if (autoConfirm) onConfirm({ address: data.display_name, lat, lng });
+         } else {
+           throw new Error("No address in Nominatim response");
+         }
+         setIsGeocoding(false);
+      })
+      .catch(osmErr => {
+         console.error("[Fallback] Nominatim failed:", osmErr);
+         console.log("[Fallback] Using raw coordinates as address...");
+         
+         // Ultimate fallback: Just use the coordinates
+         const rawAddress = `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+         setAddress(rawAddress);
+         if (autoConfirm) onConfirm({ address: rawAddress, lat, lng });
+         setIsGeocoding(false);
       });
-    } catch(e) {
-      callbackExecuted = true;
-      clearTimeout(timeoutId);
-      console.error("========== GEOCODING EXCEPTION ==========");
-      console.error("Error Object:", e);
-      
-      console.log("[Fallback 1] Trying Mappls REST API directly...");
-      const token = "bweqhgqhltgaltkwaexwsdgotghvblzvqjuk";
-      const mapplsRestUrl = `https://apis.mappls.com/advancedmaps/v1/${token}/rev_geocode?lat=${lat}&lng=${lng}`;
-      console.log("[REST API] Request URL:", mapplsRestUrl);
-
-      fetch(mapplsRestUrl)
-        .then(res => {
-          if (!res.ok) throw new Error("Mappls REST API failed with status " + res.status);
-          return res.json();
-        })
-        .then(data => {
-          console.log("[REST API] Response:", data);
-          if (data && data.results && data.results.length > 0) {
-            setAddress(data.results[0].formatted_address);
-            if (autoConfirm) onConfirm(data.results[0].formatted_address, { lat, lng });
-          } else {
-            throw new Error("No address in Mappls REST response");
-          }
-          setIsGeocoding(false);
-        })
-        .catch(restErr => {
-          console.error("[Fallback 1] Mappls REST API failed:", restErr);
-          console.log("[Fallback 2] Trying OpenStreetMap Nominatim...");
-          
-          fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-            .then(res => res.json())
-            .then(data => {
-               if (data && data.display_name) {
-                 setAddress(data.display_name);
-                 if (autoConfirm) onConfirm(data.display_name, { lat, lng });
-               } else {
-                 throw new Error("No address in Nominatim response");
-               }
-               setIsGeocoding(false);
-            })
-            .catch(osmErr => {
-               console.error("[Fallback 2] Nominatim failed:", osmErr);
-               console.log("[Fallback 3] Using raw coordinates as address...");
-               
-               // Ultimate fallback: Just use the coordinates
-               const rawAddress = `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
-               setAddress(rawAddress);
-               if (autoConfirm) onConfirm(rawAddress, { lat, lng });
-               setIsGeocoding(false);
-            });
-        });
-    }
   };
 
   const handleUseCurrentLocation = async () => {
