@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { mappls } from 'mappls-web-maps';
+import { mappls, mappls_plugin } from 'mappls-web-maps';
 
 import { isWithinDeliveryZone, MANDI_COORDS } from '../utils/DeliveryZoneValidator';
 
@@ -86,7 +86,7 @@ export default function MapModal({ onClose, onConfirm }) {
     };
   }, []);
 
-  const handleLocationChange = async (lat, lng) => {
+  const handleLocationChange = async (lat, lng, autoConfirm = false) => {
     setCurrentPosition({ lat, lng });
     
     // Check distance
@@ -94,6 +94,8 @@ export default function MapModal({ onClose, onConfirm }) {
       setIsOutOfArea(true);
       setAddress("⚠️ Sorry! Mee location maa 5 KM delivery zone bayata undi. Prastutam maa services available levu.");
       setIsGeocoding(false);
+      // We explicitly do NOT auto-confirm if they are out of the zone
+      // so they can see the error message.
       return;
     } else {
       setIsOutOfArea(false);
@@ -114,19 +116,41 @@ export default function MapModal({ onClose, onConfirm }) {
     }, 5000);
 
     try {
-      if (typeof window.mappls_plugin === "undefined" || !window.mappls_plugin.rev_geocode) {
-        throw new Error("Mappls plugin not loaded. Ensure token is valid.");
+      if (typeof mappls_plugin === "undefined" || !mappls_plugin.rev_geocode) {
+        // Fallback to window.mappls_plugin just in case
+        if (typeof window.mappls_plugin !== "undefined" && window.mappls_plugin.rev_geocode) {
+           window.mappls_plugin.rev_geocode({ lat: lat, lng: lng }, (data) => {
+             callbackExecuted = true;
+             clearTimeout(timeoutId);
+             console.log("[Mappls] Geocode response (window):", data);
+             
+             if (data && data.results && data.results.length > 0) {
+               setAddress(data.results[0].formatted_address);
+               if (autoConfirm) onConfirm(data.results[0].formatted_address, { lat, lng });
+             } else if (data && data.copResults) {
+               setAddress(data.copResults.formattedAddress);
+               if (autoConfirm) onConfirm(data.copResults.formattedAddress, { lat, lng });
+             } else {
+               setAddress("Could not fetch address for this location.");
+             }
+             setIsGeocoding(false);
+           });
+           return;
+        }
+        throw new Error("Mappls plugin not loaded from NPM or Window. Ensure token is valid.");
       }
       
-      window.mappls_plugin.rev_geocode({ lat: lat, lng: lng }, (data) => {
+      mappls_plugin.rev_geocode({ lat: lat, lng: lng }, (data) => {
         callbackExecuted = true;
         clearTimeout(timeoutId);
-        console.log("[Mappls] Geocode response:", data);
+        console.log("[Mappls] Geocode response (NPM):", data);
         
         if (data && data.results && data.results.length > 0) {
           setAddress(data.results[0].formatted_address);
+          if (autoConfirm) onConfirm(data.results[0].formatted_address, { lat, lng });
         } else if (data && data.copResults) {
           setAddress(data.copResults.formattedAddress);
+          if (autoConfirm) onConfirm(data.copResults.formattedAddress, { lat, lng });
         } else {
           setAddress("Could not fetch address for this location.");
         }
@@ -210,7 +234,7 @@ export default function MapModal({ onClose, onConfirm }) {
           }
 
           console.log("[6] Triggering handleLocationChange to reverse geocode:", { latitude, longitude });
-          handleLocationChange(latitude, longitude);
+          handleLocationChange(latitude, longitude, true); // true = autoConfirm
         },
         (error) => {
           console.error("========== GEOLOCATION FAILED ==========");
