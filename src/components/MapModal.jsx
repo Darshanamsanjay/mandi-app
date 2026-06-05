@@ -20,57 +20,69 @@ export default function MapModal({ onClose, onConfirm }) {
     if (isInitialized.current) return;
     isInitialized.current = true;
 
+    console.log("[Mappls] Initializing Map SDK...");
     const token = "bweqhgqhltgaltkwaexwsdgotghvblzvqjuk";
     
     try {
       const mapplsClassObject = new mappls();
       mapplsClassObject.initialize(token, { map: true, plugins: ['rev_geocode'] }, () => {
-        // Map initialization
-        const mapObject = mapplsClassObject.Map({
-          id: mapContainerRef.current.id,
-          properties: {
-            center: [MANDI_COORDS.lat, MANDI_COORDS.lng],
-            zoom: 15,
-            zoomControl: true,
-            clickableIcons: false
-          }
-        });
-        mapRef.current = mapObject;
+        console.log("[Mappls] SDK Initialized. Creating map instance...");
+        try {
+          // Map initialization
+          const mapObject = mapplsClassObject.Map({
+            id: mapContainerRef.current.id,
+            properties: {
+              center: [MANDI_COORDS.lat, MANDI_COORDS.lng],
+              zoom: 15,
+              zoomControl: true,
+              clickableIcons: false
+            }
+          });
+          mapRef.current = mapObject;
 
-        // Add draggable marker
-        const marker = mapplsClassObject.Marker({
-          map: mapObject,
-          position: { lat: MANDI_COORDS.lat, lng: MANDI_COORDS.lng },
-          draggable: true,
-        });
-        markerRef.current = marker;
+          console.log("[Mappls] Map instance created successfully.");
 
-        // Handle map click
-        mapObject.addListener('click', (e) => {
-          const { lat, lng } = e.lngLat;
-          marker.setPosition({ lat, lng });
-          handleLocationChange(lat, lng);
-        });
+          // Add draggable marker
+          const marker = mapplsClassObject.Marker({
+            map: mapObject,
+            position: { lat: MANDI_COORDS.lat, lng: MANDI_COORDS.lng },
+            draggable: true,
+          });
+          markerRef.current = marker;
 
-        // Handle marker drag
-        marker.addListener('dragend', () => {
-          const pos = marker.getPosition();
-          if(pos) {
-            handleLocationChange(pos.lat, pos.lng);
-          }
-        });
+          // Handle map click
+          mapObject.addListener('click', (e) => {
+            const { lat, lng } = e.lngLat;
+            console.log("[Mappls] Map clicked at:", { lat, lng });
+            marker.setPosition({ lat, lng });
+            handleLocationChange(lat, lng);
+          });
 
-        // Fetch address for initial position ONLY after map is loaded
-        handleLocationChange(MANDI_COORDS.lat, MANDI_COORDS.lng);
+          // Handle marker drag
+          marker.addListener('dragend', () => {
+            const pos = marker.getPosition();
+            if(pos) {
+              console.log("[Mappls] Marker dragged to:", pos);
+              handleLocationChange(pos.lat, pos.lng);
+            }
+          });
+
+          // Fetch address for initial position ONLY after map is loaded
+          handleLocationChange(MANDI_COORDS.lat, MANDI_COORDS.lng);
+        } catch (err) {
+          console.error("[Mappls] Failed to render map instance. This usually indicates an invalid token, domain whitelist issue, or missing container.", err);
+          setIsGeocoding(false);
+          setAddress("Map render failed. Please check console logs.");
+        }
       });
     } catch(err) {
-      console.error("Map initialization failed:", err);
+      console.error("[Mappls] Map initialization failed completely:", err);
       setIsGeocoding(false);
-      setAddress("Map failed to load. Please confirm location manually.");
+      setAddress("Map failed to load. Check API key and domain whitelist.");
     }
 
     return () => {
-      // Any cleanup if required
+      // Cleanup
     };
   }, []);
 
@@ -89,12 +101,28 @@ export default function MapModal({ onClose, onConfirm }) {
 
     setIsGeocoding(true);
     setAddress("Fetching address...");
+    console.log("[Mappls] Reverse geocoding for:", { lat, lng });
+    
+    // Failsafe timeout in case API silently fails (CORS, 401, etc.)
+    let callbackExecuted = false;
+    const timeoutId = setTimeout(() => {
+      if (!callbackExecuted) {
+        console.error("[Mappls] Reverse geocoding timed out. This is likely a CORS or 401 Unauthorized error due to Domain Whitelisting on Vercel.");
+        setAddress("Error fetching address. Ensure domain is whitelisted.");
+        setIsGeocoding(false);
+      }
+    }, 5000);
+
     try {
       if (typeof window.mappls_plugin === "undefined" || !window.mappls_plugin.rev_geocode) {
         throw new Error("Mappls plugin not loaded. Ensure token is valid.");
       }
       
       window.mappls_plugin.rev_geocode({ lat: lat, lng: lng }, (data) => {
+        callbackExecuted = true;
+        clearTimeout(timeoutId);
+        console.log("[Mappls] Geocode response:", data);
+        
         if (data && data.results && data.results.length > 0) {
           setAddress(data.results[0].formatted_address);
         } else if (data && data.copResults) {
@@ -105,31 +133,37 @@ export default function MapModal({ onClose, onConfirm }) {
         setIsGeocoding(false);
       });
     } catch(e) {
-      console.error("Geocoding failed:", e);
+      callbackExecuted = true;
+      clearTimeout(timeoutId);
+      console.error("[Mappls] Geocoding exception:", e);
       setAddress("Error fetching address. Please try again.");
       setIsGeocoding(false);
     }
   };
 
   const handleUseCurrentLocation = () => {
+    console.log("[GPS] Requesting browser geolocation...");
     if (navigator.geolocation) {
       setIsGeocoding(true);
       setAddress("Detecting your location...");
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
+          console.log("[GPS] Coordinates received:", { latitude, longitude });
           if (markerRef.current) {
             markerRef.current.setPosition({ lat: latitude, lng: longitude });
           }
           if (mapRef.current && mapRef.current.panTo) {
+             console.log("[Map] Panning map to location...");
              mapRef.current.panTo({ lat: latitude, lng: longitude });
           } else if (mapRef.current && mapRef.current.setCenter) {
+             console.log("[Map] Setting center to location...");
              mapRef.current.setCenter({ lat: latitude, lng: longitude });
           }
           handleLocationChange(latitude, longitude);
         },
         (error) => {
-          console.warn("Geolocation error:", error);
+          console.warn("[GPS] Geolocation error:", error);
           alert("Could not fetch your location. Please check your permissions.");
           setIsGeocoding(false);
           setAddress("Please confirm location manually.");
@@ -137,6 +171,7 @@ export default function MapModal({ onClose, onConfirm }) {
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     } else {
+      console.warn("[GPS] Browser does not support geolocation.");
       alert("Geolocation is not supported by your browser.");
     }
   };
@@ -148,8 +183,13 @@ export default function MapModal({ onClose, onConfirm }) {
         <button onClick={onClose} className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full font-bold text-slate-600 active:bg-slate-200 border-none">✕</button>
       </div>
       
-      <div className="flex-1 relative">
-        <div id="mappls-map-container" ref={mapContainerRef} className="w-full h-full z-10 relative"></div>
+      <div className="flex-1 relative min-h-[350px]">
+        <div id="mappls-map-container" ref={mapContainerRef} className="w-full h-full z-10 relative bg-slate-200 flex items-center justify-center">
+          {/* Fallback text behind the map in case tiles fail to load */}
+          <span className="text-slate-400 absolute z-0 text-sm font-medium px-8 text-center">
+            Map tiles loading...<br/>If this stays blank on Vercel, Mappls is blocking the domain.
+          </span>
+        </div>
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-md border border-slate-200 text-xs font-bold text-slate-700 z-[1000] pointer-events-none whitespace-nowrap">
           Tap map to move pin
         </div>
