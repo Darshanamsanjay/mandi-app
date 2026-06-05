@@ -161,24 +161,52 @@ export default function MapModal({ onClose, onConfirm }) {
       clearTimeout(timeoutId);
       console.error("========== GEOCODING EXCEPTION ==========");
       console.error("Error Object:", e);
-      console.log("[Fallback] Trying OpenStreetMap Nominatim...");
       
-      // Fallback to open source geocoder if Mappls fails
-      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-        .then(res => res.json())
-        .then(data => {
-           if (data && data.display_name) {
-             setAddress(data.display_name);
-             if (autoConfirm) onConfirm(data.display_name, { lat, lng });
-           } else {
-             setAddress("Could not fetch address for this location.");
-           }
-           setIsGeocoding(false);
+      console.log("[Fallback 1] Trying Mappls REST API directly...");
+      const token = "bweqhgqhltgaltkwaexwsdgotghvblzvqjuk";
+      const mapplsRestUrl = `https://apis.mappls.com/advancedmaps/v1/${token}/rev_geocode?lat=${lat}&lng=${lng}`;
+      console.log("[REST API] Request URL:", mapplsRestUrl);
+
+      fetch(mapplsRestUrl)
+        .then(res => {
+          if (!res.ok) throw new Error("Mappls REST API failed with status " + res.status);
+          return res.json();
         })
-        .catch(err => {
-           console.error("[Fallback] Nominatim also failed:", err);
-           setAddress("Error fetching address. Please try again.");
-           setIsGeocoding(false);
+        .then(data => {
+          console.log("[REST API] Response:", data);
+          if (data && data.results && data.results.length > 0) {
+            setAddress(data.results[0].formatted_address);
+            if (autoConfirm) onConfirm(data.results[0].formatted_address, { lat, lng });
+          } else {
+            throw new Error("No address in Mappls REST response");
+          }
+          setIsGeocoding(false);
+        })
+        .catch(restErr => {
+          console.error("[Fallback 1] Mappls REST API failed:", restErr);
+          console.log("[Fallback 2] Trying OpenStreetMap Nominatim...");
+          
+          fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+            .then(res => res.json())
+            .then(data => {
+               if (data && data.display_name) {
+                 setAddress(data.display_name);
+                 if (autoConfirm) onConfirm(data.display_name, { lat, lng });
+               } else {
+                 throw new Error("No address in Nominatim response");
+               }
+               setIsGeocoding(false);
+            })
+            .catch(osmErr => {
+               console.error("[Fallback 2] Nominatim failed:", osmErr);
+               console.log("[Fallback 3] Using raw coordinates as address...");
+               
+               // Ultimate fallback: Just use the coordinates
+               const rawAddress = `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+               setAddress(rawAddress);
+               if (autoConfirm) onConfirm(rawAddress, { lat, lng });
+               setIsGeocoding(false);
+            });
         });
     }
   };
